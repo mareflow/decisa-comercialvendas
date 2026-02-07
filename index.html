@@ -1,1 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Aprovação Comercial e Vendas</title>
+    
+    <!-- Inclusão do Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Importação da fonte 'Inter' do Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos Customizados -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .bg-brand-blue { background-color: #2563EB; }
+        .hover\:bg-brand-blue-dark:hover { background-color: #1D4ED8; }
+        
+        .os-card:hover {
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+            transition: all 0.2s ease-in-out;
+        }
+        .os-card.active {
+            border-left: 4px solid #2563EB;
+            background-color: #EBF8FF; /* blue-50 */
+        }
+        
+        /* Estilo para a tabela de Decisão (DECISÃO VENDAS) */
+        .decision-select {
+            appearance: none; /* Remove seta padrão */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 pt-20">
+
+    <!-- HEADER FIXO (Topo da Tela) -->
+    <header class="fixed top-0 left-0 right-0 h-20 bg-white shadow-md z-10 flex items-center justify-between px-8">
+        <div class="flex items-center space-x-4">
+            <img src="https://i.postimg.cc/Jh5Jvrc9/IMG-7901.png" alt="Logo TurboSul" class="w-10 h-10">
+            <div>
+                <h1 class="text-lg font-bold text-gray-800">TurboSul - Controle de Produção</h1>
+                <p class="text-sm text-gray-500">Gerenciamento de Ordens de Serviço</p>
+            </div>
+        </div>
+
+        <nav class="flex items-center space-x-6 text-sm text-gray-600">
+            <a href="#" class="px-3 py-1 hover:bg-slate-100 rounded transition duration-150 font-medium">Quadro de Produção</a>
+            <span class="text-xs text-gray-400">BR</span>
+            <a href="#" class="font-medium text-gray-800 mr-4">Português</a>
+
+            <div class="flex items-center space-x-2 text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 10a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 00-.707-.293h-1.414a1 1 0 100 2h1.414a1 1 0 00.707-.293zM3.465 5.636L4.172 6.343a1 1 0 001.414-1.414L4.879 4.222a1 1 0 00-1.414 1.414zm.707 7.778l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM10 15a1 1 0 100 2h1a1 1 0 100-2h-1z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-sm font-medium">Administrador</span>
+            </div>
+            <span class="text-xs text-gray-500 font-semibold">Setor Vendas</span>
+            <button id="logout-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1.5 px-4 rounded-md transition duration-150">Sair</button>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL (Layout de 2 Colunas) -->
+    <main class="p-6 lg:p-6 flex space-x-6 h-[calc(100vh-80px)]">
+        
+        <!-- Coluna 1: Fila de Orçamentos (25%) -->
+        <div class="w-1/4 max-w-xs bg-white rounded-lg shadow p-4 flex flex-col space-y-4 overflow-y-auto">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">ORÇAMENTOS PENDENTES</h2>
+
+            <!-- Fila de OSs (Renderizada pelo JS) -->
+            <div id="fila-de-vendas-container" class="space-y-3">
+                <p id="loading-message" class="text-gray-500 text-center mt-4">Carregando orçamentos...</p>
+            </div>
+        </div>
+
+        <!-- Coluna 2: Aprovação de Decisão (75%) -->
+        <div id="form-container" class="w-3/4 flex flex-col space-y-4">
+            
+            <h2 class="text-2xl font-semibold text-gray-800">APROVAÇÃO COMERCIAL E VENDAS</h2>
+
+            <!-- Placeholder Inicial (Até que uma OS seja selecionada) -->
+            <div id="initial-placeholder" class="bg-white rounded-lg shadow p-20 text-center flex-grow flex items-center justify-center">
+                <p class="text-gray-500 text-lg">Selecione um Orçamento para aprovação.</p>
+            </div>
+
+            <!-- Interface de Decisão (Visível após clique) -->
+            <div id="analysis-decision-wrapper" class="bg-white rounded-lg shadow flex-grow hidden">
+                <form id="sales-decision-form" class="flex flex-col h-full">
+
+                    <!-- Área Fixa: Título e Ações Rápidas -->
+                    <div class="p-4 border-b bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center">
+                            <h3 id="form-title" class="text-xl font-semibold text-gray-800">VEN-XXX - Modelo</h3>
+                            <button type="button" class="bg-slate-600 hover:bg-slate-700 text-white font-medium py-1 px-3 rounded-md transition duration-150 uppercase text-xs" id="historic-button">
+                                Histórico Completo
+                            </button>
+                        </div>
+                        <p id="ref-orcamento" class="text-sm text-gray-500 mt-1">REF. ORÇAMENTO: ORC-XXX</p>
+                        
+                        <!-- Ações Rápidas -->
+                        <div class="mt-4 flex space-x-3 items-center">
+                            <span class="text-sm font-medium text-gray-700">AÇÕES RÁPIDAS:</span>
+                            <button type="button" id="trocar-conjunto-btn" data-action="trocar" class="bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-3 rounded-md transition duration-150 text-sm">
+                                TROCAR CONJUNTO (FULL)
+                            </button>
+                            <button type="button" id="reset-diagnostico-btn" data-action="reset" class="bg-slate-200 hover:bg-slate-300 text-gray-800 font-medium py-1 px-3 rounded-md transition duration-150 text-sm">
+                                RESETAR DIAGNÓSTICO
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Decisão (Checklists) -->
+                    <div class="flex-grow p-6 overflow-y-auto space-y-6">
+                        <h4 class="text-base font-semibold text-gray-700 mb-4">Itens de Análise Técnica / Decisão de Vendas</h4>
+
+                        <div class="bg-white border rounded-lg overflow-hidden">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/3">
+                                            Peça / Serviço
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/3">
+                                            Técnico
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/3">
+                                            Decisão Vendas
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="decision-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Rows populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Informações de Logística e Expedição -->
+                        <div class="mt-6 p-4 border rounded-lg bg-blue-50">
+                            <h4 class="text-base font-semibold text-blue-800 mb-4 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-7-9a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                INFORMAÇÕES DE LOGÍSTICA E EXPEDIÇÃO
+                            </h4>
+                            <div class="grid grid-cols-4 gap-4 items-end">
+                                <div>
+                                    <label for="previsao-saida" class="block text-sm font-medium text-gray-700">Previsão de Saída</label>
+                                    <input type="date" id="previsao-saida" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-brand-blue focus:border-brand-blue">
+                                </div>
+                                <div>
+                                    <label for="horario-corte" class="block text-sm font-medium text-gray-700">Horário de Corte</label>
+                                    <input type="time" id="horario-corte" value="18:00" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-brand-blue focus:border-brand-blue">
+                                </div>
+                                <div>
+                                    <label for="dispatch-location-select" class="block text-sm font-medium text-gray-700">Local de Despacho</label>
+                                    <select id="dispatch-location-select" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-brand-blue focus:border-brand-blue">
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <input type="checkbox" id="segunda-hora-check" class="h-4 w-4 text-brand-blue border-gray-300 rounded">
+                                    <label for="segunda-hora-check" class="text-sm font-medium text-gray-700">2ª HORA</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Venda à Base de Troca (Casco) -->
+                        <div class="p-4 border rounded-lg bg-yellow-50">
+                            <h4 class="text-base font-semibold text-yellow-800 mb-2">VENDA À BASE DE TROCA</h4>
+                            <p id="hull-status" class="text-sm text-yellow-700">Status: Aguardando definição de status</p>
+                        </div>
+                    </div>
+
+                    <!-- Área de Observações e Finalização -->
+                    <div class="p-6 border-t bg-white sticky bottom-0">
+                        <div class="mb-4">
+                            <label for="vendas-observacoes" class="block text-sm font-semibold text-gray-700 mb-2">Observações de Vendas (Para Orçamento/Logística)</label>
+                            <textarea id="vendas-observacoes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-brand-blue focus:border-brand-blue text-sm"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="submit" id="finalize-sales-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                                Finalizar Vendas e Enviar para Orçamento
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    
+    <!-- MODAL DE CONFIRMAÇÃO DE AÇÃO RÁPIDA (Reutilizável) -->
+    <div id="quick-action-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-[100]">
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl p-6 text-center">
+            <svg class="w-12 h-12 text-yellow-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <h3 class="text-xl font-bold text-gray-800 mb-2" id="action-modal-title">Confirmar Ação</h3>
+            <p id="action-modal-message" class="text-gray-600 mb-6">Tem certeza que deseja realizar esta ação?</p>
+            
+            <div class="flex justify-center space-x-3">
+                <button id="cancel-action-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition duration-150">
+                    Cancelar
+                </button>
+                <button id="confirm-action-btn" class="bg-brand-blue hover:bg-brand-blue-dark text-white font-medium py-2 px-4 rounded-lg transition duration-150">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SUCESSO DE AÇÃO RÁPIDA (Reutilizável) -->
+    <div id="action-success-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-[100]">
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl p-6 text-center">
+            <div class="flex flex-col items-center mb-4">
+                <svg class="w-12 h-12 text-green-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <h3 class="text-xl font-bold text-gray-800">Sucesso!</h3>
+                <p id="action-success-message" class="text-gray-600 mt-2">Ação realizada com sucesso.</p>
+            </div>
+            <button id="action-success-ok-btn" class="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-medium py-2 px-4 rounded-lg transition duration-150">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Inclusão da biblioteca do Supabase via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Lógica de Frontend com JavaScript Puro (Vanilla JS) -->
+    <script>
+        // ====================================================================
+        // 1. CONFIGURAÇÃO E DADOS
+        // ====================================================================
+        const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
+        
+        // Webhooks
+        const WEBHOOK_GET_SALES = 'https://webhook.mareflow.com.br/webhook/sales/dashboard-data';
+        const WEBHOOK_RESET_DIAGNOSTICO = 'https://webhook.mareflow.com.br/webhook/sales/reset-diagnostico';
+        const WEBHOOK_TROCAR_CONJUNTO = 'https://teste.mareflow.com.br/webhook/sales/trocar-conjunto'; 
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentOrders = [];
+        let activeOSId = null;
+
+        // Dados estáticos para o formulário
+        const SALES_DECISION_OPTIONS = ['OK', 'RECONDICIONAR', 'TROCAR']; 
+        const DISPATCH_OPTIONS = ['Selecione...', 'SC LOG', 'BALCÃO', 'ESTOQUE', 'MOTOBOY'];
+
+        const HULL_STATE_MAP = {
+            'RECEIVED': 'Casco Recebido (Seguir Processo)',
+            'WAITING': 'Aguardando Cliente Trazer Casco',
+            'PAID': 'Pago/Incluso (Seguir Processo)',
+            'UNKNOWN': 'Aguardando definição de status' 
+        };
+        
+        const FALLBACK_USER_UID = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
+
+        // Variáveis DOM
+        let filaContainer, loadingMessage, decisionTableBody, dispatchLocationSelect;
+        let quickActionModal, confirmActionBtn, cancelActionBtn, actionModalTitle, actionModalMessage, actionSuccessModal, actionSuccessOkBtn, actionSuccessMessage;
+        let trocarConjuntoBtn, resetDiagnosticoBtn;
+
+
+        // ====================================================================
+        // 2. FUNÇÕES AUXILIARES E DE CONTROLE
+        // ====================================================================
+
+        async function getCurrentUserUID() { 
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) { return session.user.id; }
+            } catch (error) { console.error("Erro ao obter a sessão para UID.", error); }
+            return FALLBACK_USER_UID;
+        }
+
+        function getUrgencyBadge(urgency) {
+            switch (urgency) {
+                case 'Urgente': return 'bg-red-600 text-white';
+                case 'Alta': return 'bg-red-400 text-white'; 
+                case 'Normal': return 'bg-blue-300 text-gray-800';
+                case 'Baixa': return 'bg-gray-300 text-gray-800';
+                default: return 'bg-gray-300 text-gray-800';
+            }
+        }
+        
+        function formatDateTime(isoString) {
+            if (!isoString) return '--';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleDateString('pt-BR');
+            } catch {
+                return isoString;
+            }
+        }
+
+        // Gera o badge de status TÉCNICO
+        function getTechnicalStatusClass(status) {
+            if (status.includes('OK')) {
+                return '<span class="inline-block text-xs font-medium bg-green-500 text-white px-2 py-0.5 rounded-full">OK</span>';
+            } else if (status.includes('TROCAR') || status.includes('CONDENAR')) {
+                return '<span class="inline-block text-xs font-medium bg-red-600 text-white px-2 py-0.5 rounded-full">TROCAR</span>';
+            } else if (status.includes('RECONDICIONAR')) {
+                return '<span class="inline-block text-xs font-medium bg-yellow-500 text-white px-2 py-0.5 rounded-full">RECONDICIONAR</span>';
+            }
+            return '<span class="inline-block text-xs font-medium bg-slate-200 text-gray-800 px-2 py-0.5 rounded-full">NÃO INF.</span>';
+        }
+
+        function renderOrderCard(order) {
+            const urgencyText = order.urgency || 'Normal';
+            const urgencyClass = getUrgencyBadge(urgencyText);
+            
+            return `
+                <div class="os-card bg-white p-3 rounded-lg shadow border border-gray-200" data-order-id="${order.id}">
+                    <p class="text-base font-bold text-gray-800 mb-1 flex justify-between items-center">${order.business_id}
+                        <span class="inline-block text-xs font-medium ${urgencyClass} px-2 py-0.5 rounded-full">${urgencyText}</span>
+                    </p>
+                    <p class="text-sm text-gray-600">${order.model}</p>
+                    <p class="text-xs text-gray-500">${order.client}</p>
+                </div>
+            `;
+        }
+        
+        // Popula o Dropdown de Decisão de Vendas
+        function createDecisionSelect(itemName, initialDecision) {
+            const cleanName = itemName.replace(/\s+/g, '_').toLowerCase();
+            const defaultDecision = initialDecision || 'OK'; 
+
+            const options = SALES_DECISION_OPTIONS.map(opt => 
+                `<option value="${opt}" ${opt === defaultDecision ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+            
+            // A classe decision-select-item é crucial para coletar os dados no futuro (Finalizar Vendas)
+            return `
+                <select id="decisao-${cleanName}" data-item-name="${itemName}" class="decision-select decision-select-item w-full px-3 py-2 border rounded-lg bg-yellow-100 focus:ring-yellow-500 focus:border-yellow-500 text-sm font-semibold">
+                    ${options}
+                </select>
+            `;
+        }
+
+        // Renderiza a Tabela de Decisão de Vendas
+        function renderDecisionTable(order) {
+            decisionTableBody.innerHTML = '';
+            
+            // Combina todos os checklists em uma única lista para exibição
+            const allItems = [].concat(
+                order.attachments || [],
+                order.general_repairs || [],
+                order.snail_checklist || []
+            );
+
+            if (allItems.length === 0) {
+                decisionTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">Nenhum item de análise encontrado.</td></tr>';
+                return;
+            }
+
+            allItems.forEach(item => {
+                const row = `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${item.name}</td>
+                        <td class="px-6 py-3 whitespace-nowrap text-center text-sm font-medium">
+                            ${getTechnicalStatusClass(item.status || 'Não Informado')}
+                        </td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm">
+                            ${createDecisionSelect(item.name, item.sales_decision)}
+                        </td>
+                    </tr>
+                `;
+                decisionTableBody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // Popula o painel de decisão com os dados da OS
+        function populateDecisionPanel(order) {
+            activeOSId = order.id;
+            document.getElementById('initial-placeholder').classList.add('hidden');
+            document.getElementById('analysis-decision-wrapper').classList.remove('hidden');
+            
+            document.getElementById('form-title').textContent = `${order.business_id} - ${order.model}`;
+            document.getElementById('ref-orcamento').textContent = `REF. ORÇAMENTO: ${order.ref_orcamento || order.business_id}`;
+            
+            // Renderiza a Tabela
+            renderDecisionTable(order);
+            
+            // Preenche Logística/Expedição (Placeholders/Defaults)
+            document.getElementById('previsao-saida').value = formatDateTime(order.previsao_saida) || '';
+            document.getElementById('horario-corte').value = order.horario_corte || '18:00';
+            document.getElementById('vendas-observacoes').value = order.vendas_observacoes || '';
+            
+            // Status de Casco (Base de Troca)
+            document.getElementById('hull-status').textContent = `Status: ${HULL_STATE_MAP[order.hull_status] || HULL_STATE_MAP['UNKNOWN']}`;
+            
+            // Popula e seleciona Local de Despacho
+            const dispatchOptions = dispatchLocationSelect.querySelectorAll('option');
+            let found = false;
+            dispatchOptions.forEach(option => {
+                if (option.value === (order.local_despacho || 'Selecione...')) {
+                    option.selected = true;
+                    found = true;
+                }
+            });
+            if (!found && order.local_despacho) { // Se um valor existe mas não está nas opções, adiciona temporariamente e seleciona
+                 dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${order.local_despacho}" selected>${order.local_despacho}</option>`);
+            }
+        }
+
+
+        // Carregamento de dados
+        async function loadSalesOrders() { 
+            filaContainer.innerHTML = '';
+            loadingMessage.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(WEBHOOK_GET_SALES, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Falha HTTP (Status: ${response.status}). Resposta: ${errorText.substring(0, 50)}...`);
+                }
+
+                const responseJson = await response.json();
+                
+                let orders = responseJson.data; 
+                if (!Array.isArray(orders)) { orders = []; }
+                
+                currentOrders = orders; // Armazena os dados completos para uso posterior
+                
+                loadingMessage.classList.add('hidden');
+                
+                if (currentOrders.length === 0) {
+                    filaContainer.innerHTML = '<p class="text-gray-500 text-center mt-4">Nenhum orçamento pendente de aprovação.</p>';
+                    return;
+                }
+
+                currentOrders.forEach(orderToRender => {
+                    filaContainer.insertAdjacentHTML('beforeend', renderOrderCard(orderToRender));
+                });
+                
+                addCardClickListeners();
+
+            } catch (error) {
+                console.error("Erro ao carregar orçamentos:", error);
+                loadingMessage.textContent = `Erro ao carregar a fila. ${error.message}.`;
+            }
+        }
+        
+        // Funções de Modal
+        function showQuickActionModal(action, title, message) {
+            actionModalTitle.textContent = title;
+            actionModalMessage.textContent = message;
+            confirmActionBtn.dataset.actionToConfirm = action; 
+            quickActionModal.classList.remove('hidden');
+            quickActionModal.classList.add('flex');
+        }
+
+        function closeQuickActionModal() {
+            quickActionModal.classList.add('hidden');
+            quickActionModal.classList.remove('flex');
+            confirmActionBtn.dataset.actionToConfirm = '';
+            confirmActionBtn.disabled = false;
+            confirmActionBtn.textContent = 'Confirmar';
+        }
+        
+        function showActionSuccessModal(message) {
+            actionSuccessMessage.textContent = message;
+            actionSuccessModal.classList.remove('hidden');
+            actionSuccessModal.classList.add('flex');
+        }
+
+        function closeActionSuccessModal() {
+            actionSuccessModal.classList.add('hidden');
+            actionSuccessModal.classList.remove('flex');
+        }
+
+        // ====================================================================
+        // 3. AÇÕES RÁPIDAS (TROCAR/RESETAR)
+        // ====================================================================
+
+        async function handleQuickAction(actionType) {
+            if (!activeOSId) {
+                alert('Selecione um Orçamento para executar a ação.');
+                closeQuickActionModal();
+                return;
+            }
+
+            confirmActionBtn.disabled = true;
+            confirmActionBtn.textContent = 'Aguarde...';
+
+            const url = actionType === 'trocar' ? WEBHOOK_TROCAR_CONJUNTO : WEBHOOK_RESET_DIAGNOSTICO;
+            const actionName = actionType === 'trocar' ? 'Trocar Conjunto' : 'Resetar Diagnóstico';
+
+            const payload = {
+                os_id: activeOSId, 
+                user_id: await getCurrentUserUID(),
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok || response.status === 201) {
+                    closeQuickActionModal();
+                    await loadSalesOrders(); 
+                    // Limpa o painel após a ação
+                    document.getElementById('analysis-decision-wrapper').classList.add('hidden');
+                    document.getElementById('initial-placeholder').classList.remove('hidden');
+                    activeOSId = null;
+                    showActionSuccessModal(`${actionName} realizado com sucesso! A fila foi atualizada.`);
+                } else {
+                    const errorBody = await response.text();
+                    alert(`Falha ao executar ${actionName}. Status: ${response.status}. Detalhe: ${errorBody.substring(0, 100)}...`);
+                    closeQuickActionModal();
+                }
+
+            } catch (error) {
+                console.error(`Erro ao enviar ação ${actionName}:`, error);
+                alert(`Erro de conexão ao executar ${actionName}: ${error.message}`);
+                closeQuickActionModal();
+            } finally {
+                confirmActionBtn.disabled = false;
+                confirmActionBtn.textContent = 'Confirmar';
+            }
+        }
+
+
+        // ====================================================================
+        // 4. INICIALIZAÇÃO DOS LISTENERS
+        // ====================================================================
+
+        function addCardClickListeners() {
+            document.querySelectorAll('.os-card').forEach(card => {
+                card.addEventListener('click', (event) => {
+                    const orderId = event.currentTarget.dataset.orderId;
+                    const orderData = currentOrders.find(o => o.id === orderId);
+                    
+                    if (orderData) {
+                        document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active'));
+                        event.currentTarget.classList.add('active');
+                        populateDecisionPanel(orderData);
+                    }
+                });
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mapeamento dos elementos DOM
+            filaContainer = document.getElementById('fila-de-vendas-container');
+            loadingMessage = document.getElementById('loading-message');
+            decisionTableBody = document.getElementById('decision-table-body');
+            dispatchLocationSelect = document.getElementById('dispatch-location-select');
+
+            trocarConjuntoBtn = document.getElementById('trocar-conjunto-btn');
+            resetDiagnosticoBtn = document.getElementById('reset-diagnostico-btn');
+            
+            quickActionModal = document.getElementById('quick-action-modal');
+            confirmActionBtn = document.getElementById('confirm-action-btn');
+            cancelActionBtn = document.getElementById('cancel-action-btn');
+            actionModalTitle = document.getElementById('action-modal-title');
+            actionModalMessage = document.getElementById('action-modal-message');
+            actionSuccessModal = document.getElementById('action-success-modal');
+            actionSuccessOkBtn = document.getElementById('action-success-ok-btn');
+            actionSuccessMessage = document.getElementById('action-success-message');
+
+            // 1. Preenche o dropdown Local de Despacho
+            DISPATCH_OPTIONS.forEach(option => {
+                dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${option}">${option}</option>`);
+            });
+            
+            // 2. Listeners para Ações Rápidas (Abre o Modal de Confirmação)
+            trocarConjuntoBtn.addEventListener('click', () => {
+                if (!activeOSId) { alert('Selecione um Orçamento primeiro.'); return; }
+                showQuickActionModal('trocar', 'Confirmar TROCA TOTAL', 'Esta ação irá forçar a decisão de Vendas como TROCAR para todos os itens da análise. Continuar?');
+            });
+            
+            resetDiagnosticoBtn.addEventListener('click', () => {
+                if (!activeOSId) { alert('Selecione um Orçamento primeiro.'); return; }
+                showQuickActionModal('reset', 'Confirmar RESET', 'Esta ação irá resetar o diagnóstico técnico, movendo a OS para o status de "Análise Pendente" (Início do fluxo). Continuar?');
+            });
+
+            // 3. Listener do Modal de Confirmação (Executa a Ação)
+            confirmActionBtn.addEventListener('click', () => {
+                const action = confirmActionBtn.dataset.actionToConfirm;
+                if (action) {
+                    handleQuickAction(action);
+                }
+            });
+
+            // 4. Listeners para fechar Modais
+            cancelActionBtn.addEventListener('click', closeQuickActionModal);
+            actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
+            
+            // 5. Listener de Submissão (Finalizar Vendas) - A implementar em um próximo prompt
+            document.getElementById('sales-decision-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Ação "Finalizar Vendas e Enviar para Orçamento" - Lógica de coleta de dados e POST a ser implementada.');
+            });
+
+            // Chamada de Inicialização
+            (async function initDashboard() {
+                // Lógica de autenticação (mantida em placeholder, mas importante)
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                // if (error || !session) { /* window.location.href = '/index.html'; return; */ }
+
+                await loadSalesOrders();
+            })();
+        });
+    </script>
+</body>
+</html>
