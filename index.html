@@ -249,6 +249,7 @@
         const WEBHOOK_GET_SALES = 'https://webhook.mareflow.com.br/webhook/sales/dashboard-data';
         const WEBHOOK_RESET_DIAGNOSTICO = 'https://webhook.mareflow.com.br/webhook/sales/reset-diagnostico';
         const WEBHOOK_TROCAR_CONJUNTO = 'https://teste.mareflow.com.br/webhook/sales/trocar-conjunto'; 
+        const WEBHOOK_FINALIZE_SALES = 'https://webhook.mareflow.com.br/webhook/sales/finalize'; 
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -604,10 +605,74 @@
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
             
-            // 5. Listener de Submissão (Finalizar Vendas) - A implementar em um próximo prompt
-            document.getElementById('sales-decision-form').addEventListener('submit', (e) => {
+            // 5. Listener de Submissão (Finalizar Vendas)
+            document.getElementById('sales-decision-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                alert('Ação "Finalizar Vendas e Enviar para Orçamento" - Lógica de coleta de dados e POST a ser implementada.');
+                
+                const finalizeButton = document.getElementById('finalize-sales-btn');
+                const localDespacho = document.getElementById('dispatch-location-select').value;
+
+                // REQUISITO VISUAL: Validação do Local de Despacho
+                if (!localDespacho || localDespacho === 'Selecione...') {
+                    alert('Por favor, selecione um "Local de Despacho" antes de finalizar.');
+                    document.getElementById('dispatch-location-select').focus();
+                    return;
+                }
+
+                // Desabilitar botão e mostrar estado de carregamento
+                finalizeButton.disabled = true;
+                finalizeButton.textContent = 'Enviando...';
+
+                try {
+                    // TAREFA: Captura de Dados das Peças
+                    const decisionElements = document.querySelectorAll('#decision-table-body .decision-select-item');
+                    const decisions = Array.from(decisionElements).map(select => ({
+                        item_name: select.dataset.itemName,
+                        decisao_vendas: select.value
+                    }));
+
+                    // TAREFA: Montagem do Payload (JSON)
+                    const payload = {
+                        os_id: activeOSId,
+                        decisions: decisions,
+                        previsao_saida: document.getElementById('previsao-saida').value,
+                        horario_corte: document.getElementById('horario-corte').value,
+                        local_despacho: localDespacho,
+                        segunda_hora: document.getElementById('segunda-hora-check').checked,
+                        vendas_observacoes: document.getElementById('vendas-observacoes').value.trim()
+                    };
+
+                    // TAREFA: Execução do Envio (Fetch)
+                    const response = await fetch(WEBHOOK_FINALIZE_SALES, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        // TAREFA: Tratamento de Retorno e UX (Sucesso)
+                        showActionSuccessModal('Venda finalizada com sucesso! A Ordem seguiu para a Triagem Logística.');
+                        
+                        // Limpa a área de decisão e reseta o estado
+                        document.getElementById('analysis-decision-wrapper').classList.add('hidden');
+                        document.getElementById('initial-placeholder').classList.remove('hidden');
+                        activeOSId = null;
+                        
+                        // Recarrega a lista de orçamentos pendentes
+                        await loadSalesOrders();
+                    } else {
+                        const errorBody = await response.text();
+                        throw new Error(`Falha ao finalizar. Status: ${response.status}. Detalhe: ${errorBody}`);
+                    }
+
+                } catch (error) {
+                    console.error("Erro ao finalizar vendas:", error);
+                    alert(`Ocorreu um erro ao enviar os dados: ${error.message}`);
+                } finally {
+                    // Reabilitar o botão
+                    finalizeButton.disabled = false;
+                    finalizeButton.textContent = 'Finalizar Vendas e Enviar para Orçamento';
+                }
             });
 
             // Chamada de Inicialização
