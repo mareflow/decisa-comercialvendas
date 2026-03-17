@@ -183,13 +183,9 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody id="decision-table-body" class="bg-white divide-y divide-gray-200">
-                                    <!-- Rows populated by JS -->
-                                </tbody>
+<tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
                             </table>
                         </div>
-                        
-                        <!-- Informações de Logística e Expedição -->
                         <div class="mt-6 p-4 border rounded-lg bg-blue-50">
                             <h4 class="text-base font-semibold text-blue-800 mb-4 flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -408,30 +404,36 @@ function renderDecisionTable(order) {
             
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
-            // Função auxiliar para criar linha
             const createRow = (item) => `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3 text-sm font-medium text-gray-800">${item.name}</td>
-                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name, item.status, item.sales_decision)}</td>
+                    <td class="px-6 py-3 text-sm font-medium text-gray-800 uppercase">${item.name || item.item_name}</td>
+                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name || item.item_name, item.status, item.sales_decision)}</td>
                 </tr>`;
 
-            // 1. ABA 1: Extras + Attachments
+            // 1. ABA 1: Extras + Anexos
             if (order.maintenance_extras) {
                 const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
                 const labels = { actuator: "Atuador", geometry: "Geometria", geometryStem: "Canote", geometryFlange: "Flange" };
                 Object.entries(extras).forEach(([key, val]) => {
-                    if (val === true || (val && val.came === true)) {
+                    const came = val === true || (val && val.came === true);
+                    if (came) {
                         body1.insertAdjacentHTML('beforeend', createRow({ name: labels[key] || key, status: val.status || 'OK' }));
                     }
                 });
             }
             (order.attachments || []).forEach(item => body1.insertAdjacentHTML('beforeend', createRow(item)));
 
-            // 2. ABA 2: General Repairs
-            (order.general_repairs || order.checklist_geral || []).forEach(item => body2.insertAdjacentHTML('beforeend', createRow(item)));
+            // 2. ABA 2: Reparos Gerais
+            const repairs = order.general_repairs || order.checklist_geral || [];
+            repairs.forEach(item => body2.insertAdjacentHTML('beforeend', createRow(item)));
 
-            // 3. ABA 3: Snail Checklist
-            (order.snail_checklist || []).forEach(item => body3.insertAdjacentHTML('beforeend', createRow(item)));
+            // 3. ABA 3: Caracol
+            const snail = order.snail_checklist || order.checklist_caracol || [];
+            if (snail.length > 0) {
+                snail.forEach(item => body3.insertAdjacentHTML('beforeend', createRow(item)));
+            } else {
+                body3.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-400 italic text-xs uppercase">Nenhum item de caracol registrado pelo técnico.</td></tr>';
+            }
 
             validarDivergencias();
             switchSalesTab('tab1-sales');
@@ -634,14 +636,16 @@ function validarDivergencias() {
                 const techRaw = select.dataset.techVerdict || 'NÃO INFORMADO';
                 const sales = select.value;
                 
+                // Normalização técnica para comparação
                 let tech = techRaw.toUpperCase();
                 if (tech.includes('OK')) tech = 'OK';
                 if (tech.includes('TROCAR')) tech = 'TROCAR';
+                if (tech.includes('RECONDICIONAR')) tech = 'RECONDICIONAR';
 
                 if (sales === 'NÃO INFORMADO') {
                     temIncompleto = true;
                     select.classList.remove('border-red-500', 'bg-red-50');
-                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'NÃO RECEBIDO' && tech !== 'PENDING') {
+                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'PENDING') {
                     temDivergencia = true;
                     select.classList.add('border-red-500', 'bg-red-50');
                 } else {
@@ -649,28 +653,27 @@ function validarDivergencias() {
                 }
             });
 
-            if (temDivergencia || temIncompleto) {
+            // Gerenciamento do Botão e Alerta
+            const alertMsg = document.getElementById('alert-divergence');
+            
+            if (temDivergencia) {
                 finalizeBtn.disabled = true;
-                finalizeBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-                finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                finalizeBtn.innerHTML = 'Divergência Detectada';
+                finalizeBtn.className = "bg-gray-400 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed";
                 
-                if (temDivergencia) {
-                    finalizeBtn.innerHTML = 'Divergência Detectada';
-                    if (!document.getElementById('alert-divergence')) {
-                        const alertHtml = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
-                        document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', alertHtml);
-                    }
-                } else {
-                    finalizeBtn.innerHTML = 'Aguardando preenchimento...';
-                    const alertMsg = document.getElementById('alert-divergence');
-                    if (alertMsg) alertMsg.remove();
+                if (!alertMsg) {
+                    const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
+                    document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
                 }
+            } else if (temIncompleto) {
+                finalizeBtn.disabled = true;
+                finalizeBtn.innerHTML = 'Aguardando preenchimento...';
+                finalizeBtn.className = "bg-gray-300 text-gray-500 font-bold py-2 px-4 rounded-lg cursor-not-allowed";
+                if (alertMsg) alertMsg.remove();
             } else {
                 finalizeBtn.disabled = false;
-                finalizeBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-                finalizeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
                 finalizeBtn.innerHTML = 'Finalizar Vendas e Enviar para Orçamento';
-                const alertMsg = document.getElementById('alert-divergence');
+                finalizeBtn.className = "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200";
                 if (alertMsg) alertMsg.remove();
             }
         }
