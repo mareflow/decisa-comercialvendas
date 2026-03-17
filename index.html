@@ -338,8 +338,12 @@
         
         function createDecisionSelect(itemName, techVerdict, initialDecision) {
             const cleanName = itemName.replace(/\s+/g, '_').toLowerCase();
-            const defaultDecision = initialDecision || 'OK'; 
-            const options = SALES_DECISION_OPTIONS.map(opt => 
+            
+            // Inicia como NÃO INFORMADO para garantir processo cego e evitar divergência imediata
+            const defaultDecision = (initialDecision && initialDecision !== 'PENDING') ? initialDecision : 'NÃO INFORMADO'; 
+
+            const optionsList = ['NÃO INFORMADO', ...SALES_DECISION_OPTIONS];
+            const options = optionsList.map(opt => 
                 `<option value="${opt}" ${opt === defaultDecision ? 'selected' : ''}>${opt}</option>`
             ).join('');
             
@@ -356,7 +360,31 @@
 
         function renderDecisionTable(order) {
             decisionTableBody.innerHTML = '';
-            const allItems = [].concat(order.attachments || [], order.general_repairs || [], order.snail_checklist || []);
+            
+            // 1. Inclui Itens de Manutenção (Atuador, Geometria...) que vieram do técnico
+            const maintenanceItems = [];
+            if (order.maintenance_extras) {
+                const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
+                const labels = { actuator: "Atuador", geometry: "Geometria Variável", geometryStem: "Canote da Geometria", geometryFlange: "Flange da Geometria" };
+                Object.entries(extras).forEach(([key, val]) => {
+                    const came = val === true || (val && val.came === true);
+                    if (came) {
+                        maintenanceItems.push({
+                            name: labels[key] || key,
+                            status: val.status || 'PEÇA OK',
+                            sales_decision: 'NÃO INFORMADO'
+                        });
+                    }
+                });
+            }
+
+            // 2. Consolida com as 3 abas técnicas (Tratando divergência de nomes do banco)
+            const allItems = [].concat(
+                maintenanceItems,
+                order.attachments || [], 
+                order.general_repairs || order.checklist_geral || [], 
+                order.snail_checklist || []
+            );
 
             if (allItems.length === 0) {
                 decisionTableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500">Nenhum item de análise encontrado.</td></tr>';
@@ -559,22 +587,54 @@
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
             let temDivergencia = false;
+            let temIncompleto = false;
 
             selects.forEach(select => {
                 const techRaw = select.dataset.techVerdict;
                 const sales = select.value;
                 
-                // Normalização para comparação: Se contém OK (PEÇA OK, BOM / OK) vira apenas OK
-                const tech = techRaw.includes('OK') ? 'OK' : techRaw;
+                // Normalização Técnica
+                let tech = techRaw.toUpperCase();
+                if (tech.includes('OK')) tech = 'OK';
+                if (tech.includes('TROCAR')) tech = 'TROCAR';
 
-                // Se houver diferença e não for um item ignorado (Não Informado ou Não Recebido)
-                if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'NÃO RECEBIDO' && tech !== 'Não Informado') {
+                if (sales === 'NÃO INFORMADO') {
+                    temIncompleto = true;
+                    select.classList.remove('border-red-500', 'bg-red-50');
+                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'NÃO RECEBIDO') {
                     temDivergencia = true;
                     select.classList.add('border-red-500', 'bg-red-50');
                 } else {
                     select.classList.remove('border-red-500', 'bg-red-50');
                 }
             });
+
+            // Lógica de UI do Botão
+            if (temDivergencia || temIncompleto) {
+                finalizeBtn.disabled = true;
+                finalizeBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+                finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                
+                if (temDivergencia) {
+                    finalizeBtn.innerHTML = 'Divergência Detectada - Bloqueado';
+                    if (!document.getElementById('alert-divergence')) {
+                        const alertHtml = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
+                        document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', alertHtml);
+                    }
+                } else {
+                    finalizeBtn.innerHTML = 'Aguardando preenchimento...';
+                    const alertMsg = document.getElementById('alert-divergence');
+                    if (alertMsg) alertMsg.remove();
+                }
+            } else {
+                finalizeBtn.disabled = false;
+                finalizeBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+                finalizeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                finalizeBtn.innerHTML = 'Finalizar Vendas e Enviar para Orçamento';
+                const alertMsg = document.getElementById('alert-divergence');
+                if (alertMsg) alertMsg.remove();
+            }
+        }
 
             // Lógica de Bloqueio do Botão e Exibição do Alerta
             if (temDivergencia) {
