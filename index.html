@@ -361,11 +361,10 @@
         function renderDecisionTable(order) {
             decisionTableBody.innerHTML = '';
             
-            // 1. Inclui Itens de Manutenção (Atuador, Geometria...) que vieram do técnico
             const maintenanceItems = [];
             if (order.maintenance_extras) {
                 const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
-                const labels = { actuator: "Atuador", geometry: "Geometria Variável", geometryStem: "Canote da Geometria", geometryFlange: "Flange da Geometria" };
+                const labels = { actuator: "Atuador", geometry: "Geometria", geometryStem: "Canote", geometryFlange: "Flange" };
                 Object.entries(extras).forEach(([key, val]) => {
                     const came = val === true || (val && val.came === true);
                     if (came) {
@@ -378,7 +377,6 @@
                 });
             }
 
-            // 2. Consolida com as 3 abas técnicas (Tratando divergência de nomes do banco)
             const allItems = [].concat(
                 maintenanceItems,
                 order.attachments || [], 
@@ -387,6 +385,9 @@
             );
 
             if (allItems.length === 0) {
+                decisionTableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500 uppercase font-bold text-xs">Nenhum item técnico encontrado.</td></tr>';
+                return;
+            }
                 decisionTableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500">Nenhum item de análise encontrado.</td></tr>';
                 return;
             }
@@ -582,7 +583,6 @@
             });
         }
 
-        // FUNÇÃO CRÍTICA: Compara o veredito do Técnico (Oculto) com o de Vendas em tempo real
         function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
@@ -590,10 +590,9 @@
             let temIncompleto = false;
 
             selects.forEach(select => {
-                const techRaw = select.dataset.techVerdict;
+                const techRaw = select.dataset.techVerdict || 'NÃO INFORMADO';
                 const sales = select.value;
                 
-                // Normalização Técnica
                 let tech = techRaw.toUpperCase();
                 if (tech.includes('OK')) tech = 'OK';
                 if (tech.includes('TROCAR')) tech = 'TROCAR';
@@ -601,7 +600,7 @@
                 if (sales === 'NÃO INFORMADO') {
                     temIncompleto = true;
                     select.classList.remove('border-red-500', 'bg-red-50');
-                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'NÃO RECEBIDO') {
+                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'NÃO RECEBIDO' && tech !== 'PENDING') {
                     temDivergencia = true;
                     select.classList.add('border-red-500', 'bg-red-50');
                 } else {
@@ -609,14 +608,13 @@
                 }
             });
 
-            // Lógica de UI do Botão
             if (temDivergencia || temIncompleto) {
                 finalizeBtn.disabled = true;
                 finalizeBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
                 finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
                 
                 if (temDivergencia) {
-                    finalizeBtn.innerHTML = 'Divergência Detectada - Bloqueado';
+                    finalizeBtn.innerHTML = 'Divergência Detectada';
                     if (!document.getElementById('alert-divergence')) {
                         const alertHtml = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
                         document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', alertHtml);
@@ -631,28 +629,6 @@
                 finalizeBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
                 finalizeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
                 finalizeBtn.innerHTML = 'Finalizar Vendas e Enviar para Orçamento';
-                const alertMsg = document.getElementById('alert-divergence');
-                if (alertMsg) alertMsg.remove();
-            }
-        }
-
-            // Lógica de Bloqueio do Botão e Exibição do Alerta
-            if (temDivergencia) {
-                finalizeBtn.disabled = true;
-                finalizeBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-                finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
-                finalizeBtn.innerHTML = 'Divergência Detectada - Bloqueado';
-                
-                if (!document.getElementById('alert-divergence')) {
-                    const alertHtml = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
-                    document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', alertHtml);
-                }
-            } else {
-                finalizeBtn.disabled = false;
-                finalizeBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-                finalizeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-                finalizeBtn.innerHTML = 'Finalizar Vendas e Enviar para Orçamento';
-                
                 const alertMsg = document.getElementById('alert-divergence');
                 if (alertMsg) alertMsg.remove();
             }
