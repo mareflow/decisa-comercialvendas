@@ -94,8 +94,9 @@
             <h2 class="text-2xl font-semibold text-gray-800">APROVAÇÃO COMERCIAL E VENDAS</h2>
 
             <!-- Placeholder Inicial (Até que uma OS seja selecionada) -->
-            <div id="initial-placeholder" class="bg-white rounded-lg shadow p-20 text-center flex-grow flex items-center justify-center">
-                <p class="text-gray-500 text-lg">Selecione um Orçamento para aprovação.</p>
+            <div id="initial-placeholder" class="bg-white rounded-lg shadow p-20 text-center flex-grow flex flex-col items-center justify-center space-y-4">
+                <svg class="w-16 h-16 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest">Selecione um Orçamento para iniciar a aprovação comercial.</p>
             </div>
 
             <!-- Interface de Decisão (Visível após clique) -->
@@ -510,7 +511,13 @@ function renderDecisionTable(order) {
                 loadingMessage.classList.add('hidden');
                 
                 if (currentOrders.length === 0) {
-                    filaContainer.innerHTML = '<p class="text-gray-500 text-center mt-4">Nenhum orçamento pendente de aprovação.</p>';
+                    filaContainer.innerHTML = `
+                        <div class="py-12 text-center">
+                            <p class="text-gray-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">
+                                Nenhuma ordem de serviço<br>na fila de vendas.
+                            </p>
+                        </div>
+                    `;
                     return;
                 }
 
