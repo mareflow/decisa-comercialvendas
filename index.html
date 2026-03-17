@@ -157,22 +157,10 @@
                                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">Decisão Vendas</th>
                                     </tr>
                                 </thead>
-                                <tbody id="body-tab2" class="bg-white divide-y divide-gray-200"></tbody>
+<tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
                             </table>
                         </div>
 
-                        <!-- Conteúdo da Aba 3 -->
-                        <div id="tab3-sales" class="tab-content-sales hidden">
-                            <table class="min-w-full divide-y divide-gray-200 border rounded-lg overflow-hidden">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/2">Peça / Serviço (Caracol)</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">Decisão Vendas</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
                         <div class="mt-6 p-4 border rounded-lg bg-blue-50">
                             <h4 class="text-base font-semibold text-blue-800 mb-4 flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -605,7 +593,7 @@ function executarAcaoLocal(tipo) {
             });
         }
 
-        function validarDivergencias() {
+function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
             let temDivergencia = false;
