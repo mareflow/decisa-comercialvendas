@@ -677,21 +677,26 @@ function validarDivergencias() {
             let temIncompleto = false;
 
             selects.forEach(select => {
-                const techRaw = select.dataset.techVerdict || 'NÃO INFORMADO';
-                const sales = select.value;
+                const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
+                const sales = select.value.toUpperCase().trim();
                 
-                let tech = techRaw.toUpperCase();
-                if (tech.includes('OK')) tech = 'OK';
-                if (tech.includes('TROCAR')) tech = 'TROCAR';
-                if (tech.includes('RECONDICIONAR')) tech = 'RECONDICIONAR';
+                // Normalização Técnica para comparação exata
+                let techNormal = techRaw;
+                if (techRaw.includes('OK')) techNormal = 'OK';
+                if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
+                if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
 
+                // Se o comercial não escolheu nada ainda
                 if (sales === 'NÃO INFORMADO') {
                     temIncompleto = true;
                     select.classList.remove('border-red-500', 'bg-red-50');
-                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'PENDING' && tech !== 'NÃO RECEBIDO') {
+                } 
+                // Se a escolha do comercial for diferente do veredito do técnico (comparação cega)
+                else if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
                     temDivergencia = true;
                     select.classList.add('border-red-500', 'bg-red-50');
-                } else {
+                } 
+                else {
                     select.classList.remove('border-red-500', 'bg-red-50');
                 }
             });
@@ -700,9 +705,9 @@ function validarDivergencias() {
             if (temDivergencia) {
                 finalizeBtn.disabled = true;
                 finalizeBtn.innerHTML = 'Divergência Detectada';
-                finalizeBtn.className = "bg-gray-400 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed";
+                finalizeBtn.className = "bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg opacity-80 cursor-not-allowed border border-red-300";
                 if (!alertMsg) {
-                    const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
+                    const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center animate-bounce">Divergência detectada entre análise técnica e comercial. Ajuste os itens em vermelho ou peça liberação.</div>`;
                     document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
                 }
             } else if (temIncompleto) {
