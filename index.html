@@ -390,8 +390,12 @@ function renderDecisionTable(order) {
             
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
+            // Definição técnica de onde cada peça deve morar
+            const listTab2 = ['PARAFUSOS', 'CARCAÇA COMPRESSORA', 'CARCAÇA CENTRAL', 'ROTOR COMPRESSOR', 'EIXO ROTOR', 'PRATO COMPRESSOR', 'COLAR'];
+            const listTab3 = ['TRINCAS (PAREDE)', 'ROSCAS / PRISIONEIROS', 'ASSENTO DA VÁLVULA', 'FACEAMENTO'];
+
             const createRow = (item) => {
-                const name = item.name || item.item_name || 'Item s/ nome';
+                const name = (item.name || item.item_name || 'Item s/ nome').toUpperCase();
                 return `
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${name}</td>
@@ -399,31 +403,40 @@ function renderDecisionTable(order) {
                 </tr>`;
             };
 
-            // 1. ABA 1: Extras + Anexos
+            // 1. Processar Manutenção Extras (Sempre na Aba 1)
             if (order.maintenance_extras) {
                 const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
-                const labels = { actuator: "Atuador", geometry: "Geometria", geometryStem: "Canote", geometryFlange: "Flange" };
+                const labels = { actuator: "ATUADOR", geometry: "GEOMETRIA", geometryStem: "CANOTE", geometryFlange: "FLANGE" };
                 Object.entries(extras).forEach(([key, val]) => {
                     const hasItem = val === true || (val && val.came === true);
                     if (hasItem) {
-                        body1.insertAdjacentHTML('beforeend', createRow({ name: labels[key] || key, status: val.status || 'OK' }));
+                        body1.insertAdjacentHTML('beforeend', createRow({ name: labels[key] || key, status: val.status || 'PEÇA OK' }));
                     }
                 });
             }
-            (order.attachments || []).forEach(item => body1.insertAdjacentHTML('beforeend', createRow(item)));
 
-            // 2. ABA 2: Reparos Gerais
-            const repairs = order.general_repairs || order.checklist_geral || order.checklist_general || [];
-            repairs.forEach(item => body2.insertAdjacentHTML('beforeend', createRow(item)));
+            // 2. Coletar e Distribuir TODOS os itens que vieram do banco (Evitando duplicados)
+            const rawItems = [].concat(order.attachments || [], order.general_repairs || order.checklist_geral || [], order.snail_checklist || []);
+            const processedNames = new Set();
 
-            // 3. ABA 3: Checklist Caracol (Mapeamento flexível de chaves)
-            const snail = order.snail_checklist || order.checklist_caracol || order.checklist_snail || order.caracol_items || [];
-            
-            if (snail.length > 0) {
-                snail.forEach(item => body3.insertAdjacentHTML('beforeend', createRow(item)));
-            } else {
-                body3.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400 font-bold text-[10px] uppercase italic bg-slate-50">Aguardando dados do Caracol (Verifique se o n8n está enviando a chave snail_checklist).</td></tr>';
-            }
+            rawItems.forEach(item => {
+                const name = (item.name || item.item_name || "").toUpperCase();
+                if (!name || processedNames.has(name)) return;
+                processedNames.add(name);
+
+                if (listTab3.includes(name)) {
+                    body3.insertAdjacentHTML('beforeend', createRow(item));
+                } else if (listTab2.includes(name)) {
+                    body2.insertAdjacentHTML('beforeend', createRow(item));
+                } else {
+                    body1.insertAdjacentHTML('beforeend', createRow(item));
+                }
+            });
+
+            // Feedback visual se a aba estiver vazia
+            [body1, body2, body3].forEach((b, i) => {
+                if (b.innerHTML === '') b.innerHTML = `<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400 font-bold text-[10px] uppercase italic bg-slate-50">Nenhum item para a Aba ${i+1}.</td></tr>`;
+            });
 
             validarDivergencias();
             switchSalesTab('tab1-sales');
@@ -548,22 +561,24 @@ function renderDecisionTable(order) {
         // ====================================================================
 
 // Lógica de Ações Rápidas via Interface (Sem mudar status no banco ainda)
-        function executarAcaoLocal(tipo) {
+function executarAcaoLocal(tipo) {
             const selects = document.querySelectorAll('.decision-select-item');
             
             if (tipo === 'trocar') {
-                selects.forEach(s => s.value = 'TROCAR');
-                showActionSuccessModal('Ação Concluída: Todos os itens foram marcados como TROCAR. Verifique as divergências agora.');
+                selects.forEach(s => {
+                    if (!s.disabled) s.value = 'TROCAR';
+                });
+                showActionSuccessModal('TROCA TOTAL: Todos os itens analisáveis foram marcados como TROCAR.');
             } else if (tipo === 'reset') {
-                selects.forEach(s => s.value = 'NÃO INFORMADO');
-                showActionSuccessModal('Análise Resetada: Todos os itens voltaram para o estado inicial às cegas.');
+                selects.forEach(s => {
+                    if (!s.disabled) s.value = 'NÃO INFORMADO';
+                });
+                showActionSuccessModal('RESET: Suas decisões foram limpas. Recomece a análise.');
             }
             
             validarDivergencias();
             closeQuickActionModal();
         }
-
-
         // ====================================================================
         // 4. INICIALIZAÇÃO DOS LISTENERS
         // ====================================================================
