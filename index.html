@@ -390,19 +390,22 @@ function renderDecisionTable(order) {
             
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
-            const createRow = (item) => `
+            const createRow = (item) => {
+                const name = item.name || item.item_name || 'Item s/ nome';
+                return `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3 text-sm font-medium text-gray-800 uppercase">${item.name || item.item_name}</td>
-                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name || item.item_name, item.status, item.sales_decision)}</td>
+                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${name}</td>
+                    <td class="px-6 py-3 text-sm">${createDecisionSelect(name, item.status, item.sales_decision)}</td>
                 </tr>`;
+            };
 
             // 1. ABA 1: Extras + Anexos
             if (order.maintenance_extras) {
                 const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
                 const labels = { actuator: "Atuador", geometry: "Geometria", geometryStem: "Canote", geometryFlange: "Flange" };
                 Object.entries(extras).forEach(([key, val]) => {
-                    const came = val === true || (val && val.came === true);
-                    if (came) {
+                    const hasItem = val === true || (val && val.came === true);
+                    if (hasItem) {
                         body1.insertAdjacentHTML('beforeend', createRow({ name: labels[key] || key, status: val.status || 'OK' }));
                     }
                 });
@@ -410,15 +413,16 @@ function renderDecisionTable(order) {
             (order.attachments || []).forEach(item => body1.insertAdjacentHTML('beforeend', createRow(item)));
 
             // 2. ABA 2: Reparos Gerais
-            const repairs = order.general_repairs || order.checklist_geral || [];
+            const repairs = order.general_repairs || order.checklist_geral || order.checklist_general || [];
             repairs.forEach(item => body2.insertAdjacentHTML('beforeend', createRow(item)));
 
-            // 3. ABA 3: Caracol
-            const snail = order.snail_checklist || order.checklist_caracol || [];
+            // 3. ABA 3: Checklist Caracol (Mapeamento flexível de chaves)
+            const snail = order.snail_checklist || order.checklist_caracol || order.checklist_snail || order.caracol_items || [];
+            
             if (snail.length > 0) {
                 snail.forEach(item => body3.insertAdjacentHTML('beforeend', createRow(item)));
             } else {
-                body3.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-400 italic text-xs uppercase">Nenhum item de caracol registrado pelo técnico.</td></tr>';
+                body3.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400 font-bold text-[10px] uppercase italic bg-slate-50">Aguardando dados do Caracol (Verifique se o n8n está enviando a chave snail_checklist).</td></tr>';
             }
 
             validarDivergencias();
