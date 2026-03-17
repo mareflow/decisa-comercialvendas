@@ -262,6 +262,18 @@
         </div>
     </div>
 
+    <!-- MODAL DE HISTÓRICO COMPLETO -->
+    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[110]">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <h3 class="text-xl font-black text-brand-blue uppercase tracking-tighter">Linha do Tempo de Produção</h3>
+                <button id="close-details-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="timeline-container" class="mt-4 space-y-4 border-l-2 border-slate-200 ml-2 pl-4 max-h-[60vh] overflow-y-auto">
+                <!-- Histórico injetado via JS -->
+            </div>
+        </div>
+    </div>
 
     <!-- Inclusão da biblioteca do Supabase via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -566,7 +578,35 @@ function executarAcaoLocal(tipo) {
             validarDivergencias();
             closeQuickActionModal();
         }
-        // ====================================================================
+
+        async function carregarLinhaDoTempo(osId) {
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-gray-400 animate-pulse uppercase font-bold">Buscando rastreio...</p>';
+            
+            document.getElementById('details-modal').classList.remove('hidden');
+            document.getElementById('details-modal').classList.add('flex');
+
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('history_events')
+                    .select('*')
+                    .eq('service_order_id', osId)
+                    .order('timestamp', { ascending: true });
+
+                if (!error && events && events.length > 0) {
+                    timeline.innerHTML = events.map(ev => `
+                        <div class="relative pb-2">
+                            <div class="absolute -left-[21px] top-1 w-3 h-3 bg-brand-blue rounded-full border-2 border-white"></div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tighter">${ev.action}</p>
+                            <p class="text-[10px] text-gray-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[10px] text-slate-400 italic">"${ev.details}"</p>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    timeline.innerHTML = '<p class="text-xs text-gray-400 italic uppercase">Iniciando histórico de eventos...</p>';
+                }
+            } catch (err) { console.error(err); }
+        }
         // 4. INICIALIZAÇÃO DOS LISTENERS
         // ====================================================================
 
@@ -671,6 +711,17 @@ function validarDivergencias() {
             resetDiagnosticoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
                 showQuickActionModal('reset', 'RESETAR ANÁLISE', 'Deseja limpar todas as suas decisões e voltar todos os itens para NÃO INFORMADO?');
+            });
+
+            // ATIVADOR DO HISTÓRICO COMPLETO
+            document.getElementById('historic-button').addEventListener('click', () => {
+                if (activeOSId) carregarLinhaDoTempo(activeOSId);
+            });
+
+            // FECHAR MODAL DE HISTÓRICO
+            document.getElementById('close-details-modal-btn').addEventListener('click', () => {
+                document.getElementById('details-modal').classList.add('hidden');
+                document.getElementById('details-modal').classList.remove('flex');
             });
 
             // Listener do Botão Confirmar dentro do Modal
