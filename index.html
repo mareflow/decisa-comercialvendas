@@ -172,20 +172,6 @@
                                 <tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
                             </table>
                         </div>
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/2">
-                                            Peça / Serviço
-                                        </th>
-                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">
-                                            Decisão Vendas (Análise Independente)
-                                        </th>
-                                    </tr>
-                                </thead>
-<tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
                         <div class="mt-6 p-4 border rounded-lg bg-blue-50">
                             <h4 class="text-base font-semibold text-blue-800 mb-4 flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -593,7 +579,7 @@ function renderDecisionTable(order) {
             });
         }
 
-function validarDivergencias() {
+        function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
             let temDivergencia = false;
@@ -603,7 +589,6 @@ function validarDivergencias() {
                 const techRaw = select.dataset.techVerdict || 'NÃO INFORMADO';
                 const sales = select.value;
                 
-                // Normalização técnica para comparação
                 let tech = techRaw.toUpperCase();
                 if (tech.includes('OK')) tech = 'OK';
                 if (tech.includes('TROCAR')) tech = 'TROCAR';
@@ -612,7 +597,7 @@ function validarDivergencias() {
                 if (sales === 'NÃO INFORMADO') {
                     temIncompleto = true;
                     select.classList.remove('border-red-500', 'bg-red-50');
-                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'PENDING') {
+                } else if (tech !== sales && tech !== 'NÃO INFORMADO' && tech !== 'PENDING' && tech !== 'NÃO RECEBIDO') {
                     temDivergencia = true;
                     select.classList.add('border-red-500', 'bg-red-50');
                 } else {
@@ -620,14 +605,11 @@ function validarDivergencias() {
                 }
             });
 
-            // Gerenciamento do Botão e Alerta
             const alertMsg = document.getElementById('alert-divergence');
-            
             if (temDivergencia) {
                 finalizeBtn.disabled = true;
                 finalizeBtn.innerHTML = 'Divergência Detectada';
                 finalizeBtn.className = "bg-gray-400 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed";
-                
                 if (!alertMsg) {
                     const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-xs font-bold uppercase text-center">Divergência detectada entre análise técnica e comercial. Solicite a liberação do Líder.</div>`;
                     document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
