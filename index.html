@@ -827,9 +827,9 @@ function validarDivergencias() {
 
                 try {
                     const decisionElements = document.querySelectorAll('.decision-select-item');
-                    const payload = {
+const payload = {
                         os_id: activeOSId,
-                        new_os_number: osNumOficial, // Valor capturado do input do modal
+                        new_os_number: osNumOficial.toUpperCase().trim(),
                         decisions: Array.from(decisionElements).map(s => ({ 
                             item_name: s.dataset.itemName, 
                             decisao_vendas: s.value 
