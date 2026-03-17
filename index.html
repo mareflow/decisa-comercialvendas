@@ -388,9 +388,6 @@
                 decisionTableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500 uppercase font-bold text-xs">Nenhum item técnico encontrado.</td></tr>';
                 return;
             }
-                decisionTableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500">Nenhum item de análise encontrado.</td></tr>';
-                return;
-            }
 
             allItems.forEach(item => {
                 const row = `
@@ -583,7 +580,7 @@
             });
         }
 
-        function validarDivergencias() {
+function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
             let temDivergencia = false;
