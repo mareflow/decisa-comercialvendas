@@ -446,43 +446,26 @@ function renderDecisionTable(order) {
             const body1 = document.getElementById('body-tab1');
             const body2 = document.getElementById('body-tab2');
             const body3 = document.getElementById('body-tab3');
-            if (!body1 || !body2 || !body3) return;
-
+            
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
-            const listTab2 = ['PARAFUSOS', 'CARCAÇA COMPRESSORA', 'CARCAÇA CENTRAL', 'ROTOR COMPRESSOR', 'EIXO ROTOR', 'PRATO COMPRESSOR', 'COLAR'];
-            const listTab3 = ['TRINCAS (PAREDE)', 'ROSCAS / PRISIONEIROS', 'ASSENTO DA VÁLVULA', 'FACEAMENTO'];
-
-            const createRow = (item) => {
-                const name = (item.name || item.item_name || 'Item s/ nome').toUpperCase();
-                return `
+            const createRow = (item) => `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${name}</td>
-                    <td class="px-6 py-3 text-sm">${createDecisionSelect(name, item.status, item.sales_decision)}</td>
+                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${item.name || item.item_name}</td>
+                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name || item.item_name, item.status, item.sales_decision)}</td>
                 </tr>`;
-            };
 
-            if (order.maintenance_extras) {
-                const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
-                const labels = { actuator: "ATUADOR", geometry: "GEOMETRIA", geometryStem: "CANOTE", geometryFlange: "FLANGE" };
-                Object.entries(extras).forEach(([key, val]) => {
-                    const hasItem = val === true || (val && val.came === true);
-                    if (hasItem) body1.insertAdjacentHTML('beforeend', createRow({ name: labels[key] || key, status: val.status || 'PEÇA OK' }));
-                });
+            // REGRA TurboSul: Vendas foca APENAS nos Anexos Externos do cliente
+            const anexos = order.attachments || [];
+            if (anexos.length > 0) {
+                anexos.forEach(item => body1.insertAdjacentHTML('beforeend', createRow(item)));
+            } else {
+                body1.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400 font-bold text-[10px] uppercase italic">Nenhum anexo externo identificado.</td></tr>';
             }
 
-            const rawItems = [].concat(order.attachments || [], order.general_repairs || order.checklist_geral || [], order.snail_checklist || []);
-            const processedNames = new Set();
-
-            rawItems.forEach(item => {
-                const name = (item.name || item.item_name || "").toUpperCase();
-                if (!name || processedNames.has(name)) return;
-                processedNames.add(name);
-
-                if (listTab3.includes(name)) body3.insertAdjacentHTML('beforeend', createRow(item));
-                else if (listTab2.includes(name)) body2.insertAdjacentHTML('beforeend', createRow(item));
-                else body1.insertAdjacentHTML('beforeend', createRow(item));
-            });
+            // Abas de produção e caracol ficam limpas/ocultas para o vendedor
+            body2.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Itens internos em processamento na oficina.</td></tr>';
+            body3.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Checklist de Caracol reservado à bancada técnica.</td></tr>';
 
             validarDivergencias();
             switchSalesTab('tab1-sales');
@@ -819,7 +802,9 @@ function validarDivergencias() {
 
             // Clique final no botão de Confirmar OS (Aprovação Real e Envio ao n8n)
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
-                const osNumOficial = document.getElementById('input-os-oficial').value.trim();
+                // Pega o número original e bota o prefixo automático O.S-
+                const orderOriginal = currentOrders.find(o => o.id === activeOSId);
+                const osNumOficial = `O.S-${orderOriginal.business_id}`;
                 if (!osNumOficial) { alert("Informe o número da OS oficial para continuar."); return; }
 
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
