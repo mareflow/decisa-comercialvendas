@@ -330,6 +330,35 @@
         </div>
     </div>
 
+    <!-- MODAL: AUTORIZAÇÃO DE DIVERGÊNCIA TÉCNICA -->
+    <div id="modal-autorizacao-vendas" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-[200]">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl p-8 border-t-8 border-red-600">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Divergência Técnica!</h3>
+                <p class="text-sm text-gray-500 mt-2 font-medium">Você alterou vereditos técnicos. Para prosseguir, justifique a mudança.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Motivo da Alteração (Obrigatório)</label>
+                    <textarea id="motivo-divergencia" placeholder="Ex: Cliente autorizou troca preventiva mesmo estando OK..." class="w-full px-4 py-2 border-2 border-slate-100 rounded-lg focus:border-red-500 outline-none text-sm h-24 resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Palavra-Chave de Liberação</label>
+                    <input type="password" id="keyword-autorizacao" placeholder="Digite a senha admin..." class="w-full px-4 py-3 border-2 border-slate-100 rounded-lg focus:border-red-500 outline-none text-center font-black text-lg">
+                </div>
+            </div>
+
+            <div class="flex space-x-3 mt-8">
+                <button type="button" onclick="document.getElementById('modal-autorizacao-vendas').classList.add('hidden')" class="flex-1 bg-slate-200 text-slate-600 font-bold py-3 rounded-lg text-xs uppercase tracking-widest">CANCELAR</button>
+                <button type="button" id="confirm-override-btn" class="flex-[2] bg-red-600 text-white font-black py-3 rounded-lg text-xs uppercase tracking-widest shadow-lg shadow-red-200">AUTORIZAR E SEGUIR</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Inclusão da biblioteca do Supabase via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -734,52 +763,57 @@ async function carregarLinhaDoTempo(osId) {
         }
 
 function validarDivergencias() {
-            const selects = document.querySelectorAll('.decision-select-item');
-            const finalizeBtn = document.getElementById('finalize-sales-btn');
-            let temDivergencia = false;
-            let temIncompleto = false;
+    const selects = document.querySelectorAll('.decision-select-item');
+    const finalizeBtn = document.getElementById('finalize-sales-btn');
+    let temDivergencia = false;
+    let temIncompleto = false;
 
-            selects.forEach(select => {
-                const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
-                const sales = select.value.toUpperCase().trim();
-                
-                let techNormal = techRaw;
-                if (techRaw.includes('OK')) techNormal = 'OK';
-                if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
-                if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
+    selects.forEach(select => {
+        const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
+        const sales = select.value.toUpperCase().trim();
+        
+        let techNormal = techRaw;
+        if (techRaw.includes('OK')) techNormal = 'OK';
+        if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
+        if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
 
-                if (sales === 'NÃO INFORMADO') {
-                    temIncompleto = true;
-                    select.classList.remove('border-red-500', 'bg-red-50');
-                } else if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
-                    temDivergencia = true;
-                    select.classList.add('border-red-500', 'bg-red-50');
-                } else {
-                    select.classList.remove('border-red-500', 'bg-red-50');
-                }
-            });
-
-            const alertMsg = document.getElementById('alert-divergence');
-            if (temDivergencia) {
-                finalizeBtn.disabled = true;
-                finalizeBtn.innerHTML = 'Divergência Detectada';
-                finalizeBtn.className = "flex-[2] bg-red-200 text-red-700 font-black py-3 rounded-lg opacity-80 cursor-not-allowed border border-red-300 uppercase text-sm";
-                if (!alertMsg) {
-                    const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center">Divergência detectada. Ajuste os itens em vermelho para prosseguir.</div>`;
-                    document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
-                }
-            } else if (temIncompleto) {
-                finalizeBtn.disabled = true;
-                finalizeBtn.innerHTML = 'Aguardando preenchimento...';
-                finalizeBtn.className = "flex-[2] bg-gray-300 text-gray-500 font-black py-3 rounded-lg cursor-not-allowed uppercase text-sm";
-                if (alertMsg) alertMsg.remove();
-            } else {
-                finalizeBtn.disabled = false;
-                finalizeBtn.innerHTML = 'Aprovar Venda e Gerar OS';
-                finalizeBtn.className = "flex-[2] bg-green-600 hover:bg-green-700 text-white font-black py-3 rounded-lg transition duration-200 uppercase text-sm";
-                if (alertMsg) alertMsg.remove();
-            }
+        if (sales === 'NÃO INFORMADO') {
+            temIncompleto = true;
+            select.classList.remove('border-red-500', 'bg-red-50');
+        } else if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
+            temDivergencia = true;
+            select.classList.add('border-red-500', 'bg-red-50');
+        } else {
+            select.classList.remove('border-red-500', 'bg-red-50');
         }
+    });
+
+    const alertMsg = document.getElementById('alert-divergence');
+    
+    // REGRA TurboSul: O botão só trava se estiver INCOMPLETO. 
+    // Se houver DIVERGÊNCIA, ele fica liberado, mas o clique abrirá o modal de autorização.
+    if (temIncompleto) {
+        finalizeBtn.disabled = true;
+        finalizeBtn.innerHTML = 'Aguardando preenchimento...';
+        finalizeBtn.className = "flex-[2] bg-gray-300 text-gray-500 font-black py-3 rounded-lg cursor-not-allowed uppercase text-sm";
+        if (alertMsg) alertMsg.remove();
+    } else {
+        finalizeBtn.disabled = false;
+        finalizeBtn.innerHTML = 'Aprovar Venda e Gerar OS';
+        finalizeBtn.className = "flex-[2] bg-green-600 hover:bg-green-700 text-white font-black py-3 rounded-lg transition duration-200 uppercase text-sm";
+        
+        if (temDivergencia) {
+            if (!alertMsg) {
+                const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center animate-pulse">Atenção: Divergência detectada. Justificativa será exigida ao aprovar.</div>`;
+                document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
+            }
+        } else {
+            if (alertMsg) alertMsg.remove();
+        }
+    }
+
+    return temDivergencia;
+}
         
         document.addEventListener('DOMContentLoaded', () => {
             // Mapeamento dos elementos DOM
@@ -850,13 +884,39 @@ function validarDivergencias() {
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
             
-            // 5. Listener de Aprovação (Abre o Modal para pedir o Nº Oficial)
+            // 5. Listener de Aprovação com Blitz de Divergência
             document.getElementById('sales-decision-form').addEventListener('submit', (e) => {
                 e.preventDefault();
-                const modalOS = document.getElementById('modal-gerar-os');
-                modalOS.classList.remove('hidden');
-                modalOS.classList.add('flex');
-                document.getElementById('input-os-oficial').focus();
+                
+                const temDivergencia = validarDivergencias();
+                
+                if (temDivergencia) {
+                    // Se o vendedor mudou algo que o técnico disse, abre a trava
+                    document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
+                    document.getElementById('modal-autorizacao-vendas').classList.add('flex');
+                } else {
+                    // Fluxo normal
+                    const modalOS = document.getElementById('modal-gerar-os');
+                    modalOS.classList.remove('hidden');
+                    modalOS.classList.add('flex');
+                    document.getElementById('input-os-oficial').focus();
+                }
+            });
+
+            // NOVO: Clique no botão do Modal de Autorização
+            document.getElementById('confirm-override-btn').addEventListener('click', () => {
+                const motivo = document.getElementById('motivo-divergencia').value.trim();
+                const keyword = document.getElementById('keyword-autorizacao').value.trim();
+
+                if (!motivo || keyword !== 'TURBOSUL2026') { // Palavra-chave de teste
+                    alert("Atenção: É necessário justificar o motivo e inserir a palavra-chave correta.");
+                    return;
+                }
+
+                // Se autorizou, fecha este e abre o de gerar OS
+                document.getElementById('modal-autorizacao-vendas').classList.add('hidden');
+                document.getElementById('modal-gerar-os').classList.remove('hidden');
+                document.getElementById('modal-gerar-os').classList.add('flex');
             });
 
             // Clique final no botão de Confirmar OS (Aprovação Real e Envio ao n8n)
@@ -874,6 +934,10 @@ function validarDivergencias() {
 const payload = {
                         os_id: activeOSId,
                         new_os_number: osNumOficial.toUpperCase().trim(),
+                        // ENVIAMOS A JUSTIFICATIVA E A FLAG
+                        is_divergent: validarDivergencias(),
+                        divergence_reason: document.getElementById('motivo-divergencia').value.trim(),
+                        
                         decisions: Array.from(decisionElements).map(s => ({ 
                             item_name: s.dataset.itemName, 
                             decisao_vendas: s.value 
