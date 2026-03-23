@@ -522,8 +522,6 @@ function renderOrderCard(order) {
         function createDecisionSelect(itemName, techVerdict, initialDecision) {
             const cleanName = itemName.replace(/\s+/g, '_').toLowerCase();
             const optionsList = ['SELECIONAR...', 'OK', 'RECONDICIONAR', 'TROCAR'];
-            
-            // INTELIGÊNCIA DE MEMÓRIA: Verifica qual opção veio salva do banco
             const options = optionsList.map(opt => {
                 const val = opt === 'SELECIONAR...' ? '' : opt;
                 const isSelected = (val === initialDecision) ? 'selected' : ''; 
@@ -532,14 +530,6 @@ function renderOrderCard(order) {
             
             return `
                 <select id="decisao-${cleanName}" 
-                        data-item-name="${itemName}" 
-                        data-tech-verdict="${techVerdict || 'NÃO INFORMADO'}"
-                        onchange="updateStatusSelectStyle(this)"
-                        class="decision-select-item w-full px-3 py-2 border-2 border-slate-200 rounded-lg bg-white text-sm font-black uppercase transition-all duration-200">
-                    ${options}
-                </select>
-            `;
-        } 
                         data-item-name="${itemName}" 
                         data-tech-verdict="${techVerdict || 'NÃO INFORMADO'}"
                         onchange="updateStatusSelectStyle(this)"
@@ -813,7 +803,7 @@ function renderOrderCard(order) {
         }
 
         // --- CORREÇÃO 2: VALIDAÇÃO UNIFICADA ---
-        function validarDivergencias() {
+function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
             let temDivergencia = false;
@@ -823,7 +813,7 @@ function renderOrderCard(order) {
                 const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
                 const sales = select.value.toUpperCase().trim();
                 
-                if (!sales || sales === 'SELECIONAR...') {
+                if (!sales) {
                     temIncompleto = true;
                     return;
                 }
@@ -845,12 +835,10 @@ function renderOrderCard(order) {
             if (temIncompleto) {
                 finalizeBtn.innerHTML = 'AGUARDANDO SELEÇÃO...';
                 finalizeBtn.classList.replace('bg-green-600', 'bg-slate-300');
-                finalizeBtn.classList.add('cursor-not-allowed');
                 if (alertMsg) alertMsg.remove();
             } else {
                 finalizeBtn.innerHTML = 'APROVAR VENDA E GERAR OS';
                 finalizeBtn.classList.replace('bg-slate-300', 'bg-green-600');
-                finalizeBtn.classList.remove('cursor-not-allowed');
                 
                 if (temDivergencia) {
                     if (!alertMsg) {
@@ -861,7 +849,6 @@ function renderOrderCard(order) {
                     if (alertMsg) alertMsg.remove();
                 }
             }
-
             return { temDivergencia, temIncompleto };
         }
 
