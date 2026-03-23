@@ -465,17 +465,18 @@ function renderDecisionTable(order) {
                     <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name || item.item_name, item.status, item.sales_decision)}</td>
                 </tr>`;
 
-            // REGRA TurboSul: Vendas foca APENAS nos Anexos Externos do cliente
-            const anexos = order.attachments || [];
-            if (anexos.length > 0) {
-                anexos.forEach(item => body1.insertAdjacentHTML('beforeend', createRow(item)));
-            } else {
-                body1.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400 font-bold text-[10px] uppercase italic">Nenhum anexo externo identificado.</td></tr>';
-            }
+            // REGRA REFINADA: Vendedor re-marca TUDO o que o técnico identificou
+            const preencherAba = (lista, container) => {
+                if (lista && lista.length > 0) {
+                    lista.forEach(item => container.insertAdjacentHTML('beforeend', createRow(item)));
+                } else {
+                    container.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Nenhum item identificado nesta categoria.</td></tr>';
+                }
+            };
 
-            // Abas de produção e caracol ficam limpas/ocultas para o vendedor
-            body2.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Itens internos em processamento na oficina.</td></tr>';
-            body3.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Checklist de Caracol reservado à bancada técnica.</td></tr>';
+            preencherAba(order.attachments, body1);       // Itens Externos
+            preencherAba(order.general_repairs, body2);  // Itens Internos
+            preencherAba(order.snail_checklist, body3);  // Caracol
 
             validarDivergencias();
             switchSalesTab('tab1-sales');
