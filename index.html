@@ -319,8 +319,10 @@
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
             <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Aprovar e Gerar OS</h3>
-            <p class="text-xs text-gray-500 mb-6 font-medium">Confirme a aprovação para converter este orçamento em uma Ordem de Serviço oficial.</p>
+            <p class="text-xs text-gray-500 mb-4 font-medium italic text-blue-600">O prefixo "O.S-" será adicionado automaticamente.</p>
             
+            <input type="text" id="input-os-oficial" placeholder="Ex: 5500" class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-green-500 outline-none text-center font-black text-lg mb-6">
+
             <div class="flex space-x-3">
                 <button type="button" onclick="document.getElementById('modal-gerar-os').classList.add('hidden')" class="flex-1 bg-slate-200 text-slate-600 font-bold py-3 rounded-lg text-sm">VOLTAR</button>
                 <button type="button" id="confirm-generate-os-btn" class="flex-[2] bg-green-600 text-white font-black py-3 rounded-lg text-sm shadow-lg shadow-green-200">CONFIRMAR E ENVIAR</button>
@@ -979,8 +981,9 @@ function validarDivergencias() {
                 const motivo = document.getElementById('motivo-divergencia').value.trim();
                 const keyword = document.getElementById('keyword-autorizacao').value.trim();
 
+                // SENHA ADMIN DEFINIDA: TURBOSUL2026
                 if (!motivo || keyword !== 'TURBOSUL2026') {
-                    alert("Atenção: É necessário justificar o motivo e inserir a palavra-chave correta.");
+                    alert("⚠️ Autorização negada: Justifique a mudança e insira a senha ADMIN correta.");
                     return;
                 }
 
@@ -989,20 +992,22 @@ function validarDivergencias() {
                 document.getElementById('modal-gerar-os').classList.add('flex');
             });
 
-            // --- CORREÇÃO 3: PAYLOAD E ENVIO FINAL ---
+// 3. ENVIO FINAL E GERAÇÃO DE EXCEL
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
-                const orderOriginal = currentOrders.find(o => o.id === activeOSId);
-                const osNumOficial = `O.S-${orderOriginal.business_id}`;
-
+                const numeroDigitado = document.getElementById('input-os-oficial').value.trim();
+                if (!numeroDigitado) { alert("Informe o número da OS para continuar."); return; }
+                
+                const osNumOficial = `O.S-${numeroDigitado.toUpperCase()}`; 
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
                 btnConfirm.disabled = true; btnConfirm.textContent = 'Processando...';
 
                 try {
                     const { temDivergencia } = validarDivergencias();
                     const decisionElements = document.querySelectorAll('.decision-select-item');
+                    
                     const payload = {
                         os_id: activeOSId,
-                        new_os_number: osNumOficial.toUpperCase().trim(),
+                        new_os_number: osNumOficial, 
                         is_divergent: temDivergencia,
                         divergence_reason: document.getElementById('motivo-divergencia').value.trim(),
                         decisions: Array.from(decisionElements).map(s => ({ 
@@ -1023,13 +1028,17 @@ function validarDivergencias() {
                     });
 
                     if (response.ok) {
+                        // GERA O RELATÓRIO EXCEL COMERCIAL
+                        gerarRelatorioExcelComercial(payload);
+                        
                         document.getElementById('modal-gerar-os').classList.add('hidden');
-                        showActionSuccessModal(`Sucesso! OS ${osNumOficial} enviada para produção.`);
-                        setTimeout(() => location.reload(), 2000);
+                        showActionSuccessModal(`Sucesso! Orçamento convertido para ${osNumOficial}.`);
+                        setTimeout(() => location.reload(), 2500);
                     } else {
-                        alert("Falha ao salvar. Verifique a conexão.");
+                        alert("Falha ao salvar no servidor.");
+                        btnConfirm.disabled = false; btnConfirm.textContent = 'CONFIRMAR E ENVIAR';
                     }
-                } catch (err) { console.error("Erro no envio:", err); } finally { btnConfirm.disabled = false; btnConfirm.textContent = 'CONFIRMAR E ENVIAR'; }
+                } catch (err) { console.error("Erro no envio:", err); }
             });
 
             (async function initDashboard() {
@@ -1037,6 +1046,27 @@ function validarDivergencias() {
                 await loadSalesOrders();
             })();
         });
+
+        // 4. FUNÇÃO PARA GERAR RELATÓRIO EXCEL COMERCIAL (PADRÃO TURBOSUL)
+        function gerarRelatorioExcelComercial(payload) {
+            const data = [
+                ["RELATÓRIO DE APROVAÇÃO COMERCIAL"],
+                ["Nº ORDEM DE SERVIÇO:", payload.new_os_number],
+                ["PREVISÃO DE SAÍDA:", payload.previsao_saida || 'Não informada'],
+                ["LOCAL DESPACHO:", payload.local_despacho],
+                ["OBSERVAÇÕES:", payload.vendas_observacoes],
+                [""],
+                ["ITEM", "DECISÃO VENDAS"]
+            ];
+            
+            payload.decisions.forEach(d => data.push([d.item_name, d.decisao_vendas]));
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Aprovacao_Comercial");
+            
+            XLSX.writeFile(wb, `Relatorio_Comercial_${payload.new_os_number.replace(/\./g, '')}.xlsx`);
+        }
     </script>
 </body>
 </html>
