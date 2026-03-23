@@ -357,6 +357,16 @@
         </div>
     </div>
 
+    <!-- MODAL: AVISO DE OS TRAVADA -->
+    <div id="modal-os-travada" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-[150]">
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl p-8 border-t-8 border-red-600 text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 font-black text-2xl">!</div>
+            <h3 class="text-2xl font-black text-slate-800 uppercase tracking-tight">OS Bloqueada!</h3>
+            <p class="text-sm text-gray-500 mt-2 font-medium mb-6">Divergência detectada entre Vendas e Técnico. A OS foi travada no sistema e exige autorização Admin.</p>
+            <button type="button" onclick="location.reload()" class="w-full bg-slate-800 text-white font-black py-3 rounded-lg text-xs uppercase tracking-widest shadow-lg">OK, ENTENDIDO</button>
+        </div>
+    </div>
+
     <!-- Inclusão da biblioteca do Supabase via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -477,7 +487,7 @@
             return '<span class="inline-block text-xs font-medium bg-slate-200 text-gray-800 px-2 py-0.5 rounded-full">NÃO INF.</span>';
         }
 
-        function renderOrderCard(order) {
+function renderOrderCard(order) {
             const urgencyText = order.urgency || 'Normal';
             const urgencyClass = getUrgencyBadge(urgencyText);
             const isLocked = order.status === 'Bloqueada - Divergência Técnica';
@@ -747,7 +757,7 @@
             return items.length > 0 ? items.join('') : '<li class="text-gray-400">Nenhum item adicional.</li>';
         }
 
-        function addCardClickListeners() {
+ function addCardClickListeners() {
             document.querySelectorAll('.os-card').forEach(card => {
                 card.addEventListener('click', (event) => {
                     const orderId = event.currentTarget.dataset.orderId;
@@ -759,7 +769,7 @@
                         
                         populateDecisionPanel(orderData);
 
-                        // Se clicar em uma OS já travada, abre o modal de autorização
+                        // Se a OS estiver bloqueada, exige autorização ao clicar
                         if (orderData.status === 'Bloqueada - Divergência Técnica') {
                             document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
                             document.getElementById('modal-autorizacao-vendas').classList.add('flex');
@@ -888,22 +898,28 @@
                 }
 
                 if (temDivergencia) {
-                    // FLUXO REATIVO: Detectou erro? Trava no banco e avisa o usuário.
                     const btnFinalize = document.getElementById('finalize-sales-btn');
-                    btnFinalize.disabled = true; btnFinalize.textContent = 'LOCKED...';
+                    btnFinalize.disabled = true; btnFinalize.textContent = 'TRAVANDO OS...';
 
-                    await fetch('https://teste.mareflow.com.br/webhook/orders/update-status', {
+                    // DISPARA O BLOQUEIO REAL NO N8N
+                    const response = await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ os_id: activeOSId, status: 'Bloqueada - Divergência Técnica' })
+                        body: JSON.stringify({ os_id: activeOSId })
                     });
 
-                    document.getElementById('modal-os-travada').classList.remove('hidden');
-                    document.getElementById('modal-os-travada').classList.add('flex');
+                    if (response.ok) {
+                        document.getElementById('modal-os-travada').classList.remove('hidden');
+                        document.getElementById('modal-os-travada').classList.add('flex');
+                    } else {
+                        alert("Erro ao travar OS. Verifique a conexão.");
+                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA';
+                    }
                 } else {
                     const modalOS = document.getElementById('modal-gerar-os');
                     modalOS.classList.remove('hidden');
                     modalOS.classList.add('flex');
+                    document.getElementById('input-os-oficial').focus();
                 }
             });
 
