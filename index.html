@@ -319,10 +319,8 @@
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
             <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Aprovar e Gerar OS</h3>
-            <p class="text-xs text-gray-500 mb-6 font-medium">Informe o número da **OS Oficial** gerada no sistema para concluir a venda.</p>
+            <p class="text-xs text-gray-500 mb-6 font-medium">Confirme a aprovação para converter este orçamento em uma Ordem de Serviço oficial.</p>
             
-            <input type="text" id="input-os-oficial" placeholder="Ex: OS-5500" class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-green-500 outline-none text-center font-black text-lg mb-6 uppercase">
-
             <div class="flex space-x-3">
                 <button type="button" onclick="document.getElementById('modal-gerar-os').classList.add('hidden')" class="flex-1 bg-slate-200 text-slate-600 font-bold py-3 rounded-lg text-sm">VOLTAR</button>
                 <button type="button" id="confirm-generate-os-btn" class="flex-[2] bg-green-600 text-white font-black py-3 rounded-lg text-sm shadow-lg shadow-green-200">CONFIRMAR E ENVIAR</button>
@@ -493,37 +491,52 @@
                 </div>
             `;
         }
-        
+
+        // --- CORREÇÃO 1: CRIAÇÃO DO SELETOR E ESTILO DINÂMICO ---
         function createDecisionSelect(itemName, techVerdict, initialDecision) {
             const cleanName = itemName.replace(/\s+/g, '_').toLowerCase();
-            
-            // Inicia como NÃO INFORMADO para garantir processo cego e evitar divergência imediata
-            const defaultDecision = (initialDecision && initialDecision !== 'PENDING') ? initialDecision : 'NÃO INFORMADO'; 
-
-            const optionsList = ['NÃO INFORMADO', ...SALES_DECISION_OPTIONS];
-            const options = optionsList.map(opt => 
-                `<option value="${opt}" ${opt === defaultDecision ? 'selected' : ''}>${opt}</option>`
-            ).join('');
+            const optionsList = ['SELECIONAR...', 'OK', 'RECONDICIONAR', 'TROCAR'];
+            const options = optionsList.map(opt => `<option value="${opt === 'SELECIONAR...' ? '' : opt}">${opt}</option>`).join('');
             
             return `
                 <select id="decisao-${cleanName}" 
                         data-item-name="${itemName}" 
                         data-tech-verdict="${techVerdict || 'NÃO INFORMADO'}"
-                        onchange="validarDivergencias()"
-                        class="decision-select decision-select-item w-full px-3 py-2 border rounded-lg bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500 text-sm font-semibold">
+                        onchange="updateStatusSelectStyle(this)"
+                        class="decision-select-item w-full px-3 py-2 border-2 border-slate-200 rounded-lg bg-white text-sm font-black uppercase transition-all duration-200">
                     ${options}
                 </select>
             `;
         }
 
-function renderDecisionTable(order) {
+        function updateStatusSelectStyle(select) {
+            const val = select.value;
+            select.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-600', 'text-white', 'border-transparent');
+            select.classList.add('bg-white', 'text-slate-800', 'border-slate-200');
+
+            if (val === 'OK') {
+                select.classList.replace('bg-white', 'bg-green-500');
+                select.classList.replace('text-slate-800', 'text-white');
+                select.classList.replace('border-slate-200', 'border-transparent');
+            } else if (val === 'RECONDICIONAR') {
+                select.classList.replace('bg-white', 'bg-yellow-500');
+                select.classList.replace('text-slate-800', 'text-white');
+                select.classList.replace('border-slate-200', 'border-transparent');
+            } else if (val === 'TROCAR') {
+                select.classList.replace('bg-white', 'bg-red-600');
+                select.classList.replace('text-slate-800', 'text-white');
+                select.classList.replace('border-slate-200', 'border-transparent');
+            }
+            validarDivergencias(); 
+        }
+
+        function renderDecisionTable(order) {
             const body1 = document.getElementById('body-tab1');
             const body2 = document.getElementById('body-tab2');
             const body3 = document.getElementById('body-tab3');
             
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
-            // LÊ O CAMPO 'checklist' QUE VEM DO N8N
             const allItems = order.checklist || []; 
 
             const createRow = (item) => `
@@ -532,10 +545,8 @@ function renderDecisionTable(order) {
                     <td class="px-6 py-3 text-sm">${createDecisionSelect(item.item_name, item.status, item.decisao_vendas)}</td>
                 </tr>`;
 
-            // DISTRIBUIÇÃO AUTOMÁTICA POR ABA
             allItems.forEach(item => {
                 const name = item.item_name;
-                // Itens fixos do topo também vão para a Aba 1
                 const isExtra = ['ATUADOR', 'GEOMETRIA VARIÁVEL', 'CANOTE DA GEOMETRIA', 'FLANGE DA GEOMETRIA'].includes(name.toUpperCase());
 
                 if (ANALYSIS_ITEMS.tab1.includes(name) || isExtra) {
@@ -545,12 +556,10 @@ function renderDecisionTable(order) {
                 } else if (ANALYSIS_ITEMS.tab3.includes(name)) {
                     body3.insertAdjacentHTML('beforeend', createRow(item));
                 } else {
-                    // Se não estiver na lista, joga na Aba 1 por segurança
                     body1.insertAdjacentHTML('beforeend', createRow(item));
                 }
             });
 
-            // Mensagens de Vazio
             if (body1.innerHTML === '') body1.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item externo identificado.</td></tr>';
             if (body2.innerHTML === '') body2.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item interno identificado.</td></tr>';
             if (body3.innerHTML === '') body3.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item do caracol identificado.</td></tr>';
@@ -567,9 +576,9 @@ function renderDecisionTable(order) {
                 btn.classList.add('text-gray-500', 'font-medium');
             });
             const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
-            activeBtn.classList.add('text-brand-blue', 'border-b-2', 'border-brand-blue', 'font-semibold');
+            if (activeBtn) activeBtn.classList.add('text-brand-blue', 'border-b-2', 'border-brand-blue', 'font-semibold');
         }
-        // Popula o painel de decisão com os dados da OS
+
         function populateDecisionPanel(order) {
             activeOSId = order.id;
             document.getElementById('initial-placeholder').classList.add('hidden');
@@ -578,18 +587,14 @@ function renderDecisionTable(order) {
             document.getElementById('form-title').textContent = `${order.business_id} - ${order.model}`;
             document.getElementById('ref-orcamento').textContent = `REF. ORÇAMENTO: ${order.ref_orcamento || order.business_id}`;
             
-            // Renderiza a Tabela
             renderDecisionTable(order);
             
-            // Preenche Logística/Expedição (Placeholders/Defaults)
-            document.getElementById('previsao-saida').value = formatDateTime(order.previsao_saida) || '';
+            document.getElementById('previsao-saida').value = order.previsao_saida || '';
             document.getElementById('horario-corte').value = order.horario_corte || '18:00';
             document.getElementById('vendas-observacoes').value = order.vendas_observacoes || '';
             
-            // Status de Casco (Base de Troca)
             document.getElementById('hull-status').textContent = `Status: ${HULL_STATE_MAP[order.hull_status] || HULL_STATE_MAP['UNKNOWN']}`;
             
-            // Popula e seleciona Local de Despacho
             const dispatchOptions = dispatchLocationSelect.querySelectorAll('option');
             let found = false;
             dispatchOptions.forEach(option => {
@@ -598,14 +603,12 @@ function renderDecisionTable(order) {
                     found = true;
                 }
             });
-            if (!found && order.local_despacho) { // Se um valor existe mas não está nas opções, adiciona temporariamente e seleciona
+            if (!found && order.local_despacho) {
                  dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${order.local_despacho}" selected>${order.local_despacho}</option>`);
             }
         }
 
-
-        // Carregamento de dados
-async function loadSalesOrders() { 
+        async function loadSalesOrders() { 
             filaContainer.innerHTML = '';
             loadingMessage.classList.remove('hidden');
             
@@ -641,7 +644,6 @@ async function loadSalesOrders() {
             }
         }
         
-        // Funções de Modal
         function showQuickActionModal(action, title, message) {
             actionModalTitle.textContent = title;
             actionModalMessage.textContent = message;
@@ -668,38 +670,36 @@ async function loadSalesOrders() {
             actionSuccessModal.classList.add('hidden');
             actionSuccessModal.classList.remove('flex');
         }
-		
-		
 
         // ====================================================================
-        // 3. AÇÕES RÁPIDAS (TROCAR/RESETAR)
+        // 3. AÇÕES RÁPIDAS E HISTÓRICO
         // ====================================================================
 
-// Lógica de Ações Rápidas via Interface (Sem mudar status no banco ainda)
-function executarAcaoLocal(tipo) {
+        function executarAcaoLocal(tipo) {
             const selects = document.querySelectorAll('.decision-select-item');
             
             if (tipo === 'trocar') {
                 selects.forEach(s => {
-                    if (!s.disabled) s.value = 'TROCAR';
+                    s.value = 'TROCAR';
+                    updateStatusSelectStyle(s);
                 });
-                showActionSuccessModal('TROCA TOTAL: Todos os itens analisáveis foram marcados como TROCAR.');
+                showActionSuccessModal('TROCA TOTAL: Todos os itens foram marcados como TROCAR.');
             } else if (tipo === 'reset') {
                 selects.forEach(s => {
-                    if (!s.disabled) s.value = 'NÃO INFORMADO';
+                    s.value = '';
+                    updateStatusSelectStyle(s);
                 });
-                showActionSuccessModal('RESET: Suas decisões foram limpas. Recomece a análise.');
+                showActionSuccessModal('RESET: Suas decisões foram limpas.');
             }
             
             validarDivergencias();
             closeQuickActionModal();
         }
 
-async function carregarLinhaDoTempo(osId) {
+        async function carregarLinhaDoTempo(osId) {
             const order = currentOrders.find(o => o.id === osId);
             if (!order) return;
 
-            // 1. Preencher Cabeçalho e Miolo (Dificuldade, Troca, Obs)
             const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
             const tradeInText = order.is_trade_in ? `Venda à Base de Troca (${order.trade_in_option || 'Pendente'})` : 'Venda Comum';
 
@@ -711,11 +711,9 @@ async function carregarLinhaDoTempo(osId) {
             document.getElementById('detail-trade-in').textContent = tradeInText;
             document.getElementById('detail-observation').textContent = order.observation || 'Nenhuma observação técnica registrada.';
             
-            // 2. Formatar Itens Adicionais (Usando helper)
             const listExtras = document.getElementById('detail-maintenance-extras');
             listExtras.innerHTML = formatMaintenanceExtras(extras);
 
-            // 3. Buscar Histórico
             const timeline = document.getElementById('timeline-container');
             timeline.innerHTML = '<p class="text-xs text-gray-400 animate-pulse text-center">Buscando rastreio...</p>';
             
@@ -735,7 +733,6 @@ async function carregarLinhaDoTempo(osId) {
             } catch (err) { console.error(err); }
         }
 
-        // Helper para o Modal de Detalhes
         function formatMaintenanceExtras(extras) {
             if (!extras || typeof extras !== 'object') return '<li class="text-gray-400">Nenhum item adicional.</li>';
             const mapping = { actuator: 'Atuador', geometry: 'Geometria', geometryStem: 'Canote', geometryFlange: 'Flange' };
@@ -744,8 +741,6 @@ async function carregarLinhaDoTempo(osId) {
                 .map(([key, _]) => `<li class="font-bold text-slate-700">${mapping[key] || key}</li>`);
             return items.length > 0 ? items.join('') : '<li class="text-gray-400">Nenhum item adicional.</li>';
         }
-        // 4. INICIALIZAÇÃO DOS LISTENERS
-        // ====================================================================
 
         function addCardClickListeners() {
             document.querySelectorAll('.os-card').forEach(card => {
@@ -762,64 +757,66 @@ async function carregarLinhaDoTempo(osId) {
             });
         }
 
-function validarDivergencias() {
-    const selects = document.querySelectorAll('.decision-select-item');
-    const finalizeBtn = document.getElementById('finalize-sales-btn');
-    let temDivergencia = false;
-    let temIncompleto = false;
+        // --- CORREÇÃO 2: VALIDAÇÃO UNIFICADA ---
+        function validarDivergencias() {
+            const selects = document.querySelectorAll('.decision-select-item');
+            const finalizeBtn = document.getElementById('finalize-sales-btn');
+            let temDivergencia = false;
+            let temIncompleto = false;
 
-    selects.forEach(select => {
-        const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
-        const sales = select.value.toUpperCase().trim();
-        
-        let techNormal = techRaw;
-        if (techRaw.includes('OK')) techNormal = 'OK';
-        if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
-        if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
+            selects.forEach(select => {
+                const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
+                const sales = select.value.toUpperCase().trim();
+                
+                if (!sales || sales === 'SELECIONAR...') {
+                    temIncompleto = true;
+                    return;
+                }
 
-        if (sales === 'NÃO INFORMADO') {
-            temIncompleto = true;
-            select.classList.remove('border-red-500', 'bg-red-50');
-        } else if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
-            temDivergencia = true;
-            select.classList.add('border-red-500', 'bg-red-50');
-        } else {
-            select.classList.remove('border-red-500', 'bg-red-50');
-        }
-    });
+                let techNormal = techRaw;
+                if (techRaw.includes('OK')) techNormal = 'OK';
+                if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
+                if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
 
-    const alertMsg = document.getElementById('alert-divergence');
-    
-    // REGRA TurboSul: O botão só trava se estiver INCOMPLETO. 
-    // Se houver DIVERGÊNCIA, ele fica liberado, mas o clique abrirá o modal de autorização.
-    if (temIncompleto) {
-        finalizeBtn.disabled = true;
-        finalizeBtn.innerHTML = 'Aguardando preenchimento...';
-        finalizeBtn.className = "flex-[2] bg-gray-300 text-gray-500 font-black py-3 rounded-lg cursor-not-allowed uppercase text-sm";
-        if (alertMsg) alertMsg.remove();
-    } else {
-        finalizeBtn.disabled = false;
-        finalizeBtn.innerHTML = 'Aprovar Venda e Gerar OS';
-        finalizeBtn.className = "flex-[2] bg-green-600 hover:bg-green-700 text-white font-black py-3 rounded-lg transition duration-200 uppercase text-sm";
-        
-        if (temDivergencia) {
-            if (!alertMsg) {
-                const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center animate-pulse">Atenção: Divergência detectada. Justificativa será exigida ao aprovar.</div>`;
-                document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
+                if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
+                    temDivergencia = true;
+                    select.classList.add('ring-2', 'ring-red-500');
+                } else {
+                    select.classList.remove('ring-2', 'ring-red-500');
+                }
+            });
+
+            const alertMsg = document.getElementById('alert-divergence');
+            if (temIncompleto) {
+                finalizeBtn.innerHTML = 'AGUARDANDO SELEÇÃO...';
+                finalizeBtn.classList.replace('bg-green-600', 'bg-slate-300');
+                finalizeBtn.classList.add('cursor-not-allowed');
+                if (alertMsg) alertMsg.remove();
+            } else {
+                finalizeBtn.innerHTML = 'APROVAR VENDA E GERAR OS';
+                finalizeBtn.classList.replace('bg-slate-300', 'bg-green-600');
+                finalizeBtn.classList.remove('cursor-not-allowed');
+                
+                if (temDivergencia) {
+                    if (!alertMsg) {
+                        const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center animate-pulse">Atenção: Divergência detectada. Justificativa será exigida ao aprovar.</div>`;
+                        document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
+                    }
+                } else {
+                    if (alertMsg) alertMsg.remove();
+                }
             }
-        } else {
-            if (alertMsg) alertMsg.remove();
-        }
-    }
 
-    return temDivergencia;
-}
+            return { temDivergencia, temIncompleto };
+        }
+
+        // ====================================================================
+        // 4. INICIALIZAÇÃO DOS LISTENERS
+        // ====================================================================
         
         document.addEventListener('DOMContentLoaded', () => {
-            // Mapeamento dos elementos DOM
             filaContainer = document.getElementById('fila-de-vendas-container');
             loadingMessage = document.getElementById('loading-message');
-            decisionTableBody = document.getElementById('decision-table-body');
             dispatchLocationSelect = document.getElementById('dispatch-location-select');
 
             trocarConjuntoBtn = document.getElementById('trocar-conjunto-btn');
@@ -834,17 +831,14 @@ function validarDivergencias() {
             actionSuccessOkBtn = document.getElementById('action-success-ok-btn');
             actionSuccessMessage = document.getElementById('action-success-message');
 
-            // 1. Preenche o dropdown Local de Despacho
             DISPATCH_OPTIONS.forEach(option => {
                 dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${option}">${option}</option>`);
             });
 
-            // Listeners das Abas Comercial
             document.querySelectorAll('.tab-button-sales').forEach(btn => {
                 btn.addEventListener('click', () => switchSalesTab(btn.dataset.tab));
             });
 
-            // 2. Listeners para Ações Rápidas (Usando Modais TurboSul)
             trocarConjuntoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
                 showQuickActionModal('trocar', 'TROCA TOTAL (FULL)', 'Deseja marcar todos os itens de todas as abas como TROCAR automaticamente?');
@@ -852,90 +846,71 @@ function validarDivergencias() {
             
             resetDiagnosticoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
-                showQuickActionModal('reset', 'RESETAR ANÁLISE', 'Deseja limpar todas as suas decisões e voltar todos os itens para NÃO INFORMADO?');
+                showQuickActionModal('reset', 'RESETAR ANÁLISE', 'Deseja limpar todas as suas decisões e voltar todos os itens para SELECIONAR?');
             });
 
-            // ATIVADOR DO HISTÓRICO COMPLETO
             document.getElementById('historic-button').addEventListener('click', () => {
                 if (activeOSId) carregarLinhaDoTempo(activeOSId);
             });
 
-            // FECHAR MODAL DE HISTÓRICO
             document.getElementById('close-details-modal-btn').addEventListener('click', () => {
                 document.getElementById('details-modal').classList.add('hidden');
                 document.getElementById('details-modal').classList.remove('flex');
             });
 
-            // Listener do Botão Confirmar dentro do Modal
-            confirmActionBtn.onclick = () => {
-                const acao = confirmActionBtn.dataset.actionToConfirm;
-                executarAcaoLocal(acao);
-            };
-
-            // 3. Listener do Modal de Confirmação (Executa a Ação)
             confirmActionBtn.addEventListener('click', () => {
                 const action = confirmActionBtn.dataset.actionToConfirm;
-                if (action) {
-                    handleQuickAction(action);
-                }
+                if (action) { executarAcaoLocal(action); }
             });
 
-            // 4. Listeners para fechar Modais
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
             
-            // 5. Listener de Aprovação com Blitz de Divergência
             document.getElementById('sales-decision-form').addEventListener('submit', (e) => {
                 e.preventDefault();
+                const { temDivergencia, temIncompleto } = validarDivergencias();
                 
-                const temDivergencia = validarDivergencias();
-                
+                if (temIncompleto) return;
+
                 if (temDivergencia) {
-                    // Se o vendedor mudou algo que o técnico disse, abre a trava
                     document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
                     document.getElementById('modal-autorizacao-vendas').classList.add('flex');
                 } else {
-                    // Fluxo normal
                     const modalOS = document.getElementById('modal-gerar-os');
                     modalOS.classList.remove('hidden');
                     modalOS.classList.add('flex');
-                    document.getElementById('input-os-oficial').focus();
                 }
             });
 
-            // NOVO: Clique no botão do Modal de Autorização
             document.getElementById('confirm-override-btn').addEventListener('click', () => {
                 const motivo = document.getElementById('motivo-divergencia').value.trim();
                 const keyword = document.getElementById('keyword-autorizacao').value.trim();
 
-                if (!motivo || keyword !== 'TURBOSUL2026') { // Palavra-chave de teste
+                if (!motivo || keyword !== 'TURBOSUL2026') {
                     alert("Atenção: É necessário justificar o motivo e inserir a palavra-chave correta.");
                     return;
                 }
 
-                // Se autorizou, fecha este e abre o de gerar OS
                 document.getElementById('modal-autorizacao-vendas').classList.add('hidden');
                 document.getElementById('modal-gerar-os').classList.remove('hidden');
                 document.getElementById('modal-gerar-os').classList.add('flex');
             });
 
-            // Clique final no botão de Confirmar OS (Aprovação Real e Envio ao n8n)
+            // --- CORREÇÃO 3: PAYLOAD E ENVIO FINAL ---
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
-                // Pega o número original e bota o prefixo automático O.S-
                 const orderOriginal = currentOrders.find(o => o.id === activeOSId);
                 const osNumOficial = `O.S-${orderOriginal.business_id}`;
-                if (!osNumOficial) { alert("Informe o número da OS oficial para continuar."); return; }
 
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
                 btnConfirm.disabled = true; btnConfirm.textContent = 'Processando...';
 
                 try {
+                    const { temDivergencia } = validarDivergencias();
                     const decisionElements = document.querySelectorAll('.decision-select-item');
-const payload = {
+                    const payload = {
                         os_id: activeOSId,
                         new_os_number: osNumOficial.toUpperCase().trim(),
-                        // ENVIAMOS A JUSTIFICATIVA E A FLAG
-                        is_divergent: validarDivergencias(),
+                        is_divergent: temDivergencia,
                         divergence_reason: document.getElementById('motivo-divergencia').value.trim(),
                         
                         decisions: Array.from(decisionElements).map(s => ({ 
@@ -957,20 +932,16 @@ const payload = {
 
                     if (response.ok) {
                         document.getElementById('modal-gerar-os').classList.add('hidden');
-                        showActionSuccessModal(`Sucesso! Orçamento convertido para OS ${osNumOficial}.`);
-                        setTimeout(() => location.reload(), 2000); // Recarrega para limpar a fila
+                        showActionSuccessModal(`Sucesso! OS ${osNumOficial} enviada para produção.`);
+                        setTimeout(() => location.reload(), 2000);
                     } else {
-                        alert("Falha ao salvar. Verifique a conexão com o n8n.");
+                        alert("Falha ao salvar. Verifique a conexão.");
                     }
                 } catch (err) { console.error("Erro no envio:", err); } finally { btnConfirm.disabled = false; btnConfirm.textContent = 'CONFIRMAR E ENVIAR'; }
             });
 
-            // Chamada de Inicialização
             (async function initDashboard() {
-                // Lógica de autenticação (mantida em placeholder, mas importante)
                 const { data: { session }, error } = await supabaseClient.auth.getSession();
-                // if (error || !session) { /* window.location.href = '/index.html'; return; */ }
-
                 await loadSalesOrders();
             })();
         });
