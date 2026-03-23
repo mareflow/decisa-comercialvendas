@@ -920,12 +920,20 @@ function renderOrderCard(order) {
                         segunda_hora: document.getElementById('segunda-hora-check').checked
                     };
 
+                    // CAPTURA AS DECISÕES PARA NÃO PERDER O QUE JÁ FOI MARCADO
+                    const decisionElements = document.querySelectorAll('.decision-select-item');
+                    const currentDecisions = Array.from(decisionElements).map(s => ({ 
+                        item_name: s.dataset.itemName, 
+                        decisao_vendas: s.value 
+                    }));
+
                     const response = await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
                             os_id: activeOSId,
-                            ...logisticaData // Envia a logística junto
+                            decisions: currentDecisions, // AGORA O N8N VAI ENCONTRAR O CAMPO
+                            ...logisticaData 
                         })
                     });
 
