@@ -635,7 +635,11 @@ function renderOrderCard(order) {
                 document.getElementById('previsao-saida').value = '';
             }
 
-            document.getElementById('horario-corte').value = order.horario_corte || '18:00';
+document.getElementById('horario-corte').value = order.horario_corte || '18:00';
+            
+            // CARREGA O ESTADO DO CHECKBOX 2ª HORA
+            document.getElementById('segunda-hora-check').checked = order.segunda_hora === true;
+            
             document.getElementById('vendas-observacoes').value = order.vendas_observacoes || '';
             
             document.getElementById('hull-status').textContent = `Status: ${HULL_STATE_MAP[order.hull_status] || HULL_STATE_MAP['UNKNOWN']}`;
