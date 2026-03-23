@@ -480,14 +480,19 @@
         function renderOrderCard(order) {
             const urgencyText = order.urgency || 'Normal';
             const urgencyClass = getUrgencyBadge(urgencyText);
-            
+            const isLocked = order.status === 'Bloqueada - Divergência Técnica';
+            const lockBadge = isLocked ? `<span class="block mt-2 text-[9px] font-black bg-red-600 text-white px-2 py-0.5 rounded text-center animate-pulse">DIVERGÊNCIA TÉCNICA</span>` : '';
+
             return `
-                <div class="os-card bg-white p-3 rounded-lg shadow border border-gray-200" data-order-id="${order.id}">
+                <div class="os-card bg-white p-3 rounded-lg shadow border-2 ${isLocked ? 'border-red-600 shadow-red-100' : 'border-gray-200'} cursor-pointer" 
+                     data-order-id="${order.id}" 
+                     data-status="${order.status}">
                     <p class="text-base font-bold text-gray-800 mb-1 flex justify-between items-center">${order.business_id}
                         <span class="inline-block text-xs font-medium ${urgencyClass} px-2 py-0.5 rounded-full">${urgencyText}</span>
                     </p>
                     <p class="text-sm text-gray-600">${order.model}</p>
                     <p class="text-xs text-gray-500">${order.client}</p>
+                    ${lockBadge}
                 </div>
             `;
         }
@@ -751,7 +756,14 @@
                     if (orderData) {
                         document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active'));
                         event.currentTarget.classList.add('active');
+                        
                         populateDecisionPanel(orderData);
+
+                        // Se clicar em uma OS já travada, abre o modal de autorização
+                        if (orderData.status === 'Bloqueada - Divergência Técnica') {
+                            document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
+                            document.getElementById('modal-autorizacao-vendas').classList.add('flex');
+                        }
                     }
                 });
             });
@@ -866,15 +878,28 @@
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
             
-            document.getElementById('sales-decision-form').addEventListener('submit', (e) => {
+            document.getElementById('sales-decision-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const { temDivergencia, temIncompleto } = validarDivergencias();
                 
-                if (temIncompleto) return;
+                if (temIncompleto) {
+                    alert("Selecione uma decisão para todos os itens.");
+                    return;
+                }
 
                 if (temDivergencia) {
-                    document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
-                    document.getElementById('modal-autorizacao-vendas').classList.add('flex');
+                    // FLUXO REATIVO: Detectou erro? Trava no banco e avisa o usuário.
+                    const btnFinalize = document.getElementById('finalize-sales-btn');
+                    btnFinalize.disabled = true; btnFinalize.textContent = 'LOCKED...';
+
+                    await fetch('https://teste.mareflow.com.br/webhook/orders/update-status', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ os_id: activeOSId, status: 'Bloqueada - Divergência Técnica' })
+                    });
+
+                    document.getElementById('modal-os-travada').classList.remove('hidden');
+                    document.getElementById('modal-os-travada').classList.add('flex');
                 } else {
                     const modalOS = document.getElementById('modal-gerar-os');
                     modalOS.classList.remove('hidden');
@@ -912,8 +937,10 @@
                         new_os_number: osNumOficial.toUpperCase().trim(),
                         is_divergent: temDivergencia,
                         divergence_reason: document.getElementById('motivo-divergencia').value.trim(),
-                        
                         decisions: Array.from(decisionElements).map(s => ({ 
+                            item_name: s.dataset.itemName, 
+                            decisao_vendas: s.value 
+                        })), 
                             item_name: s.dataset.itemName, 
                             decisao_vendas: s.value 
                         })),
