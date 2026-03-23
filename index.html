@@ -494,24 +494,37 @@ function renderDecisionTable(order) {
             
             body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
 
+            // LÊ O CAMPO 'checklist' QUE VEM DO N8N
+            const allItems = order.checklist || []; 
+
             const createRow = (item) => `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${item.name || item.item_name}</td>
-                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.name || item.item_name, item.status, item.sales_decision)}</td>
+                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${item.item_name}</td>
+                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.item_name, item.status, item.decisao_vendas)}</td>
                 </tr>`;
 
-            // REGRA REFINADA: Vendedor re-marca TUDO o que o técnico identificou
-            const preencherAba = (lista, container) => {
-                if (lista && lista.length > 0) {
-                    lista.forEach(item => container.insertAdjacentHTML('beforeend', createRow(item)));
-                } else {
-                    container.innerHTML = '<tr><td colspan="2" class="px-6 py-8 text-center text-slate-300 text-[10px] uppercase font-bold italic">Nenhum item identificado nesta categoria.</td></tr>';
-                }
-            };
+            // DISTRIBUIÇÃO AUTOMÁTICA POR ABA
+            allItems.forEach(item => {
+                const name = item.item_name;
+                // Itens fixos do topo também vão para a Aba 1
+                const isExtra = ['ATUADOR', 'GEOMETRIA VARIÁVEL', 'CANOTE DA GEOMETRIA', 'FLANGE DA GEOMETRIA'].includes(name.toUpperCase());
 
-            preencherAba(order.attachments, body1);       // Itens Externos
-            preencherAba(order.general_repairs, body2);  // Itens Internos
-            preencherAba(order.snail_checklist, body3);  // Caracol
+                if (ANALYSIS_ITEMS.tab1.includes(name) || isExtra) {
+                    body1.insertAdjacentHTML('beforeend', createRow(item));
+                } else if (ANALYSIS_ITEMS.tab2.includes(name)) {
+                    body2.insertAdjacentHTML('beforeend', createRow(item));
+                } else if (ANALYSIS_ITEMS.tab3.includes(name)) {
+                    body3.insertAdjacentHTML('beforeend', createRow(item));
+                } else {
+                    // Se não estiver na lista, joga na Aba 1 por segurança
+                    body1.insertAdjacentHTML('beforeend', createRow(item));
+                }
+            });
+
+            // Mensagens de Vazio
+            if (body1.innerHTML === '') body1.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item externo identificado.</td></tr>';
+            if (body2.innerHTML === '') body2.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item interno identificado.</td></tr>';
+            if (body3.innerHTML === '') body3.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item do caracol identificado.</td></tr>';
 
             validarDivergencias();
             switchSalesTab('tab1-sales');
