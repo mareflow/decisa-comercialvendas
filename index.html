@@ -522,10 +522,24 @@ function renderOrderCard(order) {
         function createDecisionSelect(itemName, techVerdict, initialDecision) {
             const cleanName = itemName.replace(/\s+/g, '_').toLowerCase();
             const optionsList = ['SELECIONAR...', 'OK', 'RECONDICIONAR', 'TROCAR'];
-            const options = optionsList.map(opt => `<option value="${opt === 'SELECIONAR...' ? '' : opt}">${opt}</option>`).join('');
+            
+            // INTELIGÊNCIA DE MEMÓRIA: Verifica qual opção veio salva do banco
+            const options = optionsList.map(opt => {
+                const val = opt === 'SELECIONAR...' ? '' : opt;
+                const isSelected = (val === initialDecision) ? 'selected' : ''; 
+                return `<option value="${val}" ${isSelected}>${opt}</option>`;
+            }).join('');
             
             return `
                 <select id="decisao-${cleanName}" 
+                        data-item-name="${itemName}" 
+                        data-tech-verdict="${techVerdict || 'NÃO INFORMADO'}"
+                        onchange="updateStatusSelectStyle(this)"
+                        class="decision-select-item w-full px-3 py-2 border-2 border-slate-200 rounded-lg bg-white text-sm font-black uppercase transition-all duration-200">
+                    ${options}
+                </select>
+            `;
+        } 
                         data-item-name="${itemName}" 
                         data-tech-verdict="${techVerdict || 'NÃO INFORMADO'}"
                         onchange="updateStatusSelectStyle(this)"
@@ -591,6 +605,14 @@ function renderOrderCard(order) {
             if (body3.innerHTML === '') body3.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item do caracol identificado.</td></tr>';
 
             validarDivergencias();
+            
+            // PINTA OS SELECTS QUE JÁ POSSUEM VALOR
+            setTimeout(() => {
+                document.querySelectorAll('.decision-select-item').forEach(select => {
+                    if (select.value) updateStatusSelectStyle(select);
+                });
+            }, 100);
+
             switchSalesTab('tab1-sales');
         }
 
