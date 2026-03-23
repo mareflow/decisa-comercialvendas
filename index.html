@@ -627,7 +627,14 @@ function renderOrderCard(order) {
             
             renderDecisionTable(order);
             
-            document.getElementById('previsao-saida').value = order.previsao_saida || '';
+            // FORMATAÇÃO DE DATA PARA O NAVEGADOR (YYYY-MM-DD)
+            if (order.previsao_saida) {
+                const dateOnly = order.previsao_saida.split('T')[0];
+                document.getElementById('previsao-saida').value = dateOnly;
+            } else {
+                document.getElementById('previsao-saida').value = '';
+            }
+
             document.getElementById('horario-corte').value = order.horario_corte || '18:00';
             document.getElementById('vendas-observacoes').value = order.vendas_observacoes || '';
             
