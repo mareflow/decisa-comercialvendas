@@ -938,9 +938,8 @@ function validarDivergencias() {
 
                 if (temDivergencia) {
                     const btnFinalize = document.getElementById('finalize-sales-btn');
-                    btnFinalize.disabled = true; btnFinalize.textContent = 'TRAVANDO OS...';
+                    btnFinalize.disabled = true; btnFinalize.textContent = 'PROCESSANDO DIVERGÊNCIA...';
 
-                    // CAPTURA LOGÍSTICA ANTES DE TRAVAR
                     const logisticaData = {
                         previsao_saida: document.getElementById('previsao-saida').value,
                         horario_corte: document.getElementById('horario-corte').value,
@@ -948,29 +947,33 @@ function validarDivergencias() {
                         segunda_hora: document.getElementById('segunda-hora-check').checked
                     };
 
-                    // CAPTURA AS DECISÕES PARA NÃO PERDER O QUE JÁ FOI MARCADO
                     const decisionElements = document.querySelectorAll('.decision-select-item');
                     const currentDecisions = Array.from(decisionElements).map(s => ({ 
                         item_name: s.dataset.itemName, 
                         decisao_vendas: s.value 
                     }));
 
-                    const response = await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            os_id: activeOSId,
-                            decisions: currentDecisions, // AGORA O N8N VAI ENCONTRAR O CAMPO
-                            ...logisticaData 
-                        })
-                    });
+                    // 1. Registramos o bloqueio no banco via n8n (Segurança)
+                    try {
+                        await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ 
+                                os_id: activeOSId,
+                                status: 'Bloqueada - Divergência Técnica',
+                                decisions: currentDecisions,
+                                ...logisticaData 
+                            })
+                        });
 
-                    if (response.ok) {
-                        document.getElementById('modal-os-travada').classList.remove('hidden');
-                        document.getElementById('modal-os-travada').classList.add('flex');
-                    } else {
-                        alert("Erro ao travar OS. Verifique a conexão.");
-                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA';
+                        // 2. Em vez de travar a tela, abrimos o Modal de Senha para "Pass Forward"
+                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA E GERAR OS';
+                        document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
+                        document.getElementById('modal-autorizacao-vendas').classList.add('flex');
+                        
+                    } catch (err) {
+                        alert("Erro ao processar divergência técnica.");
+                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA E GERAR OS';
                     }
                 } else {
                     const modalOS = document.getElementById('modal-gerar-os');
