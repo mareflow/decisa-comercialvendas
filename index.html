@@ -829,35 +829,52 @@ function validarDivergencias() {
             let temIncompleto = false;
 
             selects.forEach(select => {
+                // 1. Coleta os dados brutos e limpa espaços/caixa alta
                 const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
-                const sales = select.value.toUpperCase().trim();
+                const salesRaw = select.value.toUpperCase().trim();
                 
-                if (!sales) {
+                // Se o vendedor ainda não escolheu nada, marca como incompleto
+                if (!salesRaw) {
                     temIncompleto = true;
                     return;
                 }
 
-                let techNormal = techRaw;
-                if (techRaw.includes('OK')) techNormal = 'OK';
-                if (techRaw.includes('TROCAR')) techNormal = 'TROCAR';
-                if (techRaw.includes('RECONDICIONAR')) techNormal = 'RECONDICIONAR';
+                // 2. Lógica de Normalização (Transforma termos diferentes em uma base comum)
+                let techClean = 'N/A';
+                if (techRaw.includes('OK') || techRaw.includes('BOM')) techClean = 'OK';
+                else if (techRaw.includes('TROCAR') || techRaw.includes('CONDENAR')) techClean = 'TROCAR';
+                else if (techRaw.includes('RECONDICIONAR')) techClean = 'RECONDICIONAR';
 
-                if (techNormal !== sales && techNormal !== 'NÃO INFORMADO' && techNormal !== 'PENDING' && techNormal !== 'NÃO RECEBIDO') {
+                let salesClean = 'N/A';
+                if (salesRaw.includes('OK')) salesClean = 'OK';
+                else if (salesRaw.includes('TROCAR')) salesClean = 'TROCAR';
+                else if (salesRaw.includes('RECONDICIONAR')) salesClean = 'RECONDICIONAR';
+
+                // 3. Comparação Inteligente
+                // Só valida se o técnico deu um veredito real (Ignora PENDING ou NÃO INFORMADO)
+                const isTechVereditValid = !['NÃO INFORMADO', 'PENDING', 'NÃO RECEBIDO', ''].includes(techRaw);
+
+                if (isTechVereditValid && techClean !== salesClean) {
                     temDivergencia = true;
-                    select.classList.add('ring-2', 'ring-red-500');
+                    // Aplica um destaque visual mais forte no campo divergente
+                    select.classList.add('ring-4', 'ring-red-500', 'ring-inset');
                 } else {
-                    select.classList.remove('ring-2', 'ring-red-500');
+                    select.classList.remove('ring-4', 'ring-red-500', 'ring-inset');
                 }
             });
 
+            // 4. Gestão da Interface (Botão e Alerta)
             const alertMsg = document.getElementById('alert-divergence');
+
             if (temIncompleto) {
                 finalizeBtn.innerHTML = 'AGUARDANDO SELEÇÃO...';
                 finalizeBtn.classList.replace('bg-green-600', 'bg-slate-300');
+                finalizeBtn.disabled = true;
                 if (alertMsg) alertMsg.remove();
             } else {
                 finalizeBtn.innerHTML = 'APROVAR VENDA E GERAR OS';
                 finalizeBtn.classList.replace('bg-slate-300', 'bg-green-600');
+                finalizeBtn.disabled = false;
                 
                 if (temDivergencia) {
                     if (!alertMsg) {
@@ -870,7 +887,6 @@ function validarDivergencias() {
             }
             return { temDivergencia, temIncompleto };
         }
-
         // ====================================================================
         // 4. INICIALIZAÇÃO DOS LISTENERS
         // ====================================================================
