@@ -322,7 +322,7 @@
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
             <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Aprovar e Gerar OS</h3>
-            <p class="text-xs text-gray-500 mb-4 font-medium italic text-blue-600">O prefixo "O.S-" será adicionado automaticamente.</p>
+            <p class="text-xs text-gray-500 mb-4 font-medium italic text-blue-600">Confirme o número oficial da Ordem de Serviço abaixo:</p>
             
             <input type="text" id="input-os-oficial" placeholder="Ex: 5500" class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-green-500 outline-none text-center font-black text-lg mb-6">
 
@@ -976,10 +976,21 @@ function validarDivergencias() {
                         btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA E GERAR OS';
                     }
                 } else {
+                    // Pega a OS ativa na memória
+                    const activeOrder = currentOrders.find(o => o.id === activeOSId);
+                    
+                    // Lógica TurboSul: Pega o que está depois do "ORÇ-" e coloca "O.S-"
+                    const numeroApenas = activeOrder.business_id.replace('ORÇ-', '');
+                    const numeroOSGerado = 'O.S-' + numeroApenas;
+
                     const modalOS = document.getElementById('modal-gerar-os');
                     modalOS.classList.remove('hidden');
                     modalOS.classList.add('flex');
-                    document.getElementById('input-os-oficial').focus();
+
+                    // Já deixa o campo preenchido com o número automático
+                    const inputOS = document.getElementById('input-os-oficial');
+                    inputOS.value = numeroOSGerado;
+                    inputOS.focus();
                 }
             });
 
@@ -1000,10 +1011,13 @@ function validarDivergencias() {
 
 // 3. ENVIO FINAL E GERAÇÃO DE EXCEL
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
-                const numeroDigitado = document.getElementById('input-os-oficial').value.trim();
-                if (!numeroDigitado) { alert("Informe o número da OS para continuar."); return; }
+                let osNumOficial = document.getElementById('input-os-oficial').value.trim().toUpperCase();
+                if (!osNumOficial) { alert("Informe o número da OS para continuar."); return; }
                 
-                const osNumOficial = `O.S-${numeroDigitado.toUpperCase()}`; 
+                // Se por acaso o usuário apagou o prefixo, nós garantimos que ele exista
+                if (!osNumOficial.startsWith('O.S-')) {
+                    osNumOficial = 'O.S-' + osNumOficial;
+                } 
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
                 btnConfirm.disabled = true; btnConfirm.textContent = 'Processando...';
 
