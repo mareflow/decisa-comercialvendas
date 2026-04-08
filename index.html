@@ -914,17 +914,18 @@ function validarDivergencias() {
 
             
 
-// 3. ENVIO FINAL E GERAÇÃO DE EXCEL
+// 3. ENVIO FINAL E GERAÇÃO DE EXCEL (VERSÃO CORRIGIDA SEM TRAVA)
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
                 let osNumOficial = document.getElementById('input-os-oficial').value.trim().toUpperCase();
                 if (!osNumOficial) { alert("Informe o número da OS para continuar."); return; }
                 
-                // Se por acaso o usuário apagou o prefixo, nós garantimos que ele exista
                 if (!osNumOficial.startsWith('O.S-')) {
                     osNumOficial = 'O.S-' + osNumOficial;
                 } 
+                
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
-                btnConfirm.disabled = true; btnConfirm.textContent = 'Processando...';
+                btnConfirm.disabled = true; 
+                btnConfirm.textContent = 'Enviando...';
 
                 try {
                     const { temDivergencia } = validarDivergencias();
@@ -934,7 +935,8 @@ function validarDivergencias() {
                         os_id: activeOSId,
                         new_os_number: osNumOficial, 
                         is_divergent: temDivergencia,
-                        divergence_reason: document.getElementById('motivo-divergencia').value.trim(),
+                        // Enviamos vazio ou uma nota padrão, já que o campo foi removido
+                        divergence_reason: "Liberado via fluxo direto de vendas",
                         decisions: Array.from(decisionElements).map(s => ({ 
                             item_name: s.dataset.itemName, 
                             decisao_vendas: s.value 
@@ -945,6 +947,29 @@ function validarDivergencias() {
                         segunda_hora: document.getElementById('segunda-hora-check').checked,
                         vendas_observacoes: document.getElementById('vendas-observacoes').value.trim()
                     };
+
+                    const response = await fetch(WEBHOOK_FINALIZE_SALES, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
+
+                    if (response.ok) {
+                        gerarRelatorioExcelComercial(payload);
+                        document.getElementById('modal-gerar-os').classList.add('hidden');
+                        showActionSuccessModal(`Sucesso! Orçamento convertido para ${osNumOficial}.`);
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        alert("Falha ao salvar no servidor.");
+                        btnConfirm.disabled = false; 
+                        btnConfirm.textContent = 'CONFIRMAR E ENVIAR';
+                    }
+                } catch (err) { 
+                    console.error("Erro no envio:", err); 
+                    alert("Erro de conexão com o servidor.");
+                    btnConfirm.disabled = false;
+                }
+            });
 
                     const response = await fetch(WEBHOOK_FINALIZE_SALES, { 
                         method: 'POST', 
