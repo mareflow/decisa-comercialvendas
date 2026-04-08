@@ -516,50 +516,31 @@ function renderDecisionTable(order) {
             if (!body) return;
             body.innerHTML = '';
 
-            const itemsToDisplay = [];
+            // 1. ITENS FIXOS OBRIGATÓRIOS PARA VENDAS (Sempre aparecem na tela)
+            const coreItems = [
+                { id: 'actuator', name: "ATUADOR" },
+                { id: 'geometry', name: "GEOMETRIA VARIÁVEL" },
+                { id: 'geometryStem', name: "CANOTE DA GEOMETRIA" },
+                { id: 'geometryFlange', name: "FLANGE DA GEOMETRIA" }
+            ];
 
-            // 1. LER APENAS OS 4 ITENS DO TOPO (maintenance_extras)
-            const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
-            
-            if (extras) {
-                const labels = { 
-                    actuator: "ATUADOR", 
-                    geometry: "GEOMETRIA VARIÁVEL", 
-                    geometryStem: "CANOTE DA GEOMETRIA", 
-                    geometryFlange: "FLANGE DA GEOMETRIA" 
-                };
+            // 2. Tenta recuperar o que já foi salvo no banco (checklist)
+            const salesChecklist = order.checklist || [];
 
-                Object.entries(extras).forEach(([key, data]) => {
-                    // Só entra na lista se o técnico marcou que o item EXISTE ("came": true)
-                    const hasItem = (data === true) || (data && data.came === true);
-                    const techVerdict = data.status || (data === true ? "BOM / OK" : "NÃO INFORMADO");
+            coreItems.forEach(item => {
+                // Procura se já existe decisão salva para esse item
+                const existingData = salesChecklist.find(c => c.item_name.toUpperCase() === item.name);
+                const salesDecision = existingData ? existingData.decisao_vendas : ""; // Inicia vazio se não houver
+                const techVerdict = existingData ? existingData.status : "NÃO INFORMADO";
 
-                    if (hasItem) {
-                        itemsToDisplay.push({
-                            name: labels[key] || key,
-                            techStatus: techVerdict,
-                            salesDecision: "PENDING" 
-                        });
-                    }
-                });
-            }
-
-            // 2. Valida se algum item foi detectado
-            if (itemsToDisplay.length === 0) {
-                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-slate-400 text-xs italic font-bold uppercase tracking-widest">Nenhum dos 4 itens principais (Atuador/Geometria) foi identificado para troca ou reparo.</td></tr>';
-                return;
-            }
-
-            // 3. Renderiza apenas os itens filtrados
-            itemsToDisplay.forEach(item => {
                 const row = `
                     <tr class="bg-blue-50/30 hover:bg-blue-50 transition border-b border-blue-100">
-                        <td class="px-6 py-4 text-sm font-black text-slate-700 uppercase tracking-tighter">
-                            <i class="fa-solid fa-star text-blue-400 mr-2"></i>${item.name}
-                            <p class="text-[9px] text-blue-500 font-bold italic">Veredito Técnico: ${item.techStatus || 'NÃO INF.'}</p>
+                        <td class="px-6 py-5 text-sm font-black text-slate-800 uppercase tracking-tighter">
+                            <i class="fa-solid fa-check-double text-blue-500 mr-3"></i>${item.name}
+                            <p class="text-[9px] text-slate-400 font-bold italic mt-1 uppercase">Auditoria Comercial Obrigatória</p>
                         </td>
-                        <td class="px-6 py-4 text-sm">
-                            ${createDecisionSelect(item.name, item.techStatus, item.salesDecision)}
+                        <td class="px-6 py-5 text-sm">
+                            ${createDecisionSelect(item.name, techVerdict, salesDecision)}
                         </td>
                     </tr>`;
                 
@@ -568,14 +549,16 @@ function renderDecisionTable(order) {
 
             validarDivergencias();
             
+            // Pinta os selects que já possuem valor
             setTimeout(() => {
                 document.querySelectorAll('.decision-select-item').forEach(select => {
-                    if (select.value && select.value !== "PENDING") {
+                    if (select.value && select.value !== "SELECIONAR...") {
                         updateStatusSelectStyle(select);
                     }
                 });
             }, 100);
         }
+		
         function populateDecisionPanel(order) {
             activeOSId = order.id;
 			// Reseta o checkbox global de caracol ao carregar uma nova OS
