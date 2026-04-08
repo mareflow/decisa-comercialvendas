@@ -132,13 +132,7 @@
                     <div class="p-4 bg-slate-50 border-b flex items-center justify-between">
                         <div class="flex flex-col">
                             <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Checklist de Itens para Vendas</span>
-                            <span class="text-[9px] text-blue-600 font-bold uppercase ml-2 italic">* Itens detectados pela Análise Técnica</span>
-                        </div>
-                        
-                        <!-- Botão de Condenar Caracol movido para o topo para facilitar acesso -->
-                        <div class="mr-4 flex items-center bg-red-50 px-4 py-2 rounded-xl border border-red-100">
-                            <input type="checkbox" id="condenar-caracol-global-vendas" onchange="condenarTudoCaracolVendas(this)" class="w-5 h-5 text-red-600 border-red-300 rounded focus:ring-red-500 cursor-pointer">
-                            <label for="condenar-caracol-global-vendas" class="ml-2 text-[10px] font-black text-red-700 uppercase tracking-tighter cursor-pointer">Condenar Caracol (FULL)</label>
+                            <span class="text-[9px] text-blue-600 font-bold uppercase ml-2 italic">* ITENS ENVIADOS PELA ANÁLISE TÉCNICA</span>
                         </div>
                     </div>
 
@@ -519,35 +513,29 @@ function renderOrderCard(order) {
 
         function renderDecisionTable(order) {
             const body = document.getElementById('body-checklist-unico');
+            if (!body) return;
             body.innerHTML = '';
 
+            // Pega o checklist enviado pelo n8n/Supabase
             const allItems = order.checklist || []; 
             
             if (allItems.length === 0) {
-                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-gray-400 text-xs italic font-bold uppercase tracking-widest">Nenhuma peça ou serviço identificado pelo técnico.</td></tr>';
+                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-gray-400 text-xs italic font-bold uppercase tracking-widest">Nenhuma peça ou serviço enviado pela análise.</td></tr>';
                 return;
             }
 
-            // Filtra e Prioriza os itens (Atuador, Geometria, etc.)
-            const prioritizedKeywords = ['ATUADOR', 'GEOMETRIA', 'CANOTE', 'FLANGE'];
-            
             allItems.forEach(item => {
-                const name = item.item_name.toUpperCase();
+                // Usa item_name (vinda do n8n) ou name (vinda da view)
+                const nomeItem = item.item_name || item.name || "Item Indefinido";
                 
-                // Ignora o item de condenação global na listagem
-                if (name === 'CONDENAR CARACOL COMPLETO') return;
-
-                const isCritical = prioritizedKeywords.some(key => name.includes(key));
-                const rowClass = isCritical ? 'bg-blue-50/30' : '';
-                const icon = isCritical ? '<i class="fa-solid fa-star text-blue-400 mr-2"></i>' : '';
-
                 const row = `
-                    <tr class="${rowClass} hover:bg-slate-50 transition">
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-50">
                         <td class="px-6 py-4 text-sm font-black text-slate-700 uppercase tracking-tighter">
-                            ${icon}${item.item_name}
+                            ${nomeItem}
+                            <p class="text-[9px] text-blue-500 font-bold italic">Veredito Técnico: ${item.status || 'NÃO INF.'}</p>
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            ${createDecisionSelect(item.item_name, item.status, item.decisao_vendas)}
+                            ${createDecisionSelect(nomeItem, item.status, item.decisao_vendas)}
                         </td>
                     </tr>`;
                 
@@ -556,12 +544,13 @@ function renderOrderCard(order) {
 
             validarDivergencias();
             
-            // Pinta os selects que já possuem valor (memória)
             setTimeout(() => {
                 document.querySelectorAll('.decision-select-item').forEach(select => {
-                    if (select.value) updateStatusSelectStyle(select);
+                    if (select.value && select.value !== "PENDING") {
+                        updateStatusSelectStyle(select);
+                    }
                 });
-            }, 50);
+            }, 100);
         }
 
         function populateDecisionPanel(order) {
@@ -998,22 +987,6 @@ function validarDivergencias() {
             XLSX.writeFile(wb, `Relatorio_Comercial_${payload.new_os_number.replace(/\./g, '')}.xlsx`);
         }
 		
-		// FUNÇÃO PARA CONDENAR TUDO NA ABA CARACOL (VENDAS)
-        function condenarTudoCaracolVendas(checkbox) {
-            const tab3 = document.getElementById('tab3-sales');
-            const selects = tab3.querySelectorAll('.decision-select-item');
-            
-            const statusTarget = checkbox.checked ? 'TROCAR' : '';
-
-            selects.forEach(select => {
-                select.value = statusTarget;
-                // Chama a função de estilo para pintar as caixas de vermelho/branco
-                updateStatusSelectStyle(select);
-            });
-
-            // Se desmarcar, o sistema volta a pedir validação
-            validarDivergencias();
-        }
 		
     </script>
 </body>
