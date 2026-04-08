@@ -342,34 +342,7 @@
         </div>
     </div>
 
-    <!-- MODAL: AUTORIZAÇÃO DE DIVERGÊNCIA TÉCNICA -->
-    <div id="modal-autorizacao-vendas" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-[200]">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl p-8 border-t-8 border-red-600">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Divergência Técnica!</h3>
-                <p class="text-sm text-gray-500 mt-2 font-medium">Você alterou vereditos técnicos. Para prosseguir, justifique a mudança.</p>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Motivo da Alteração (Obrigatório)</label>
-                    <textarea id="motivo-divergencia" placeholder="Ex: Cliente autorizou troca preventiva mesmo estando OK..." class="w-full px-4 py-2 border-2 border-slate-100 rounded-lg focus:border-red-500 outline-none text-sm h-24 resize-none"></textarea>
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Palavra-Chave de Liberação</label>
-                    <input type="password" id="keyword-autorizacao" placeholder="Digite a senha admin..." class="w-full px-4 py-3 border-2 border-slate-100 rounded-lg focus:border-red-500 outline-none text-center font-black text-lg">
-                </div>
-            </div>
-
-            <div class="flex space-x-3 mt-8">
-                <button type="button" onclick="document.getElementById('modal-autorizacao-vendas').classList.add('hidden')" class="flex-1 bg-slate-200 text-slate-600 font-bold py-3 rounded-lg text-xs uppercase tracking-widest">CANCELAR</button>
-                <button type="button" id="confirm-override-btn" class="flex-[2] bg-red-600 text-white font-black py-3 rounded-lg text-xs uppercase tracking-widest shadow-lg shadow-red-200">AUTORIZAR E SEGUIR</button>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- MODAL: AVISO DE OS TRAVADA -->
     <div id="modal-os-travada" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-[150]">
@@ -893,7 +866,7 @@ function validarDivergencias() {
                 
                 if (temDivergencia) {
                     if (!alertMsg) {
-                        const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center animate-pulse">Atenção: Divergência detectada. Justificativa será exigida ao aprovar.</div>`;
+                        const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center">Atenção: Divergência detectada entre Vendas e Técnico.</div>`;
                         document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
                     }
                 } else {
@@ -960,53 +933,29 @@ function validarDivergencias() {
             
             document.getElementById('sales-decision-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const { temDivergencia, temIncompleto } = validarDivergencias();
+                const { temIncompleto } = validarDivergencias();
                 
                 if (temIncompleto) {
                     alert("Selecione uma decisão para todos os itens.");
                     return;
                 }
 
-                if (temDivergencia) {
-                    const btnFinalize = document.getElementById('finalize-sales-btn');
-                    btnFinalize.disabled = true; btnFinalize.textContent = 'PROCESSANDO DIVERGÊNCIA...';
+                // Pega a OS ativa na memória
+                const activeOrder = currentOrders.find(o => o.id === activeOSId);
+                
+                // Lógica TurboSul: Pega o que está depois do "ORÇ-" e coloca "O.S-"
+                const numeroApenas = activeOrder.business_id.replace('ORÇ-', '');
+                const numeroOSGerado = 'O.S-' + numeroApenas;
 
-                    const logisticaData = {
-                        previsao_saida: document.getElementById('previsao-saida').value,
-                        horario_corte: document.getElementById('horario-corte').value,
-                        local_despacho: document.getElementById('dispatch-location-select').value,
-                        segunda_hora: document.getElementById('segunda-hora-check').checked
-                    };
+                const modalOS = document.getElementById('modal-gerar-os');
+                modalOS.classList.remove('hidden');
+                modalOS.classList.add('flex');
 
-                    const decisionElements = document.querySelectorAll('.decision-select-item');
-                    const currentDecisions = Array.from(decisionElements).map(s => ({ 
-                        item_name: s.dataset.itemName, 
-                        decisao_vendas: s.value 
-                    }));
-
-                    // 1. Registramos o bloqueio no banco via n8n (Segurança)
-                    try {
-                        await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ 
-                                os_id: activeOSId,
-                                status: 'Bloqueada - Divergência Técnica',
-                                decisions: currentDecisions,
-                                ...logisticaData 
-                            })
-                        });
-
-                        // 2. Em vez de travar a tela, abrimos o Modal de Senha para "Pass Forward"
-                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA E GERAR OS';
-                        document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
-                        document.getElementById('modal-autorizacao-vendas').classList.add('flex');
-                        
-                    } catch (err) {
-                        alert("Erro ao processar divergência técnica.");
-                        btnFinalize.disabled = false; btnFinalize.textContent = 'APROVAR VENDA E GERAR OS';
-                    }
-                } else {
+                // Já deixa o campo preenchido com o número automático
+                const inputOS = document.getElementById('input-os-oficial');
+                inputOS.value = numeroOSGerado;
+                inputOS.focus();
+            });
                     // Pega a OS ativa na memória
                     const activeOrder = currentOrders.find(o => o.id === activeOSId);
                     
@@ -1025,20 +974,7 @@ function validarDivergencias() {
                 }
             });
 
-            document.getElementById('confirm-override-btn').addEventListener('click', () => {
-                const motivo = document.getElementById('motivo-divergencia').value.trim();
-                const keyword = document.getElementById('keyword-autorizacao').value.trim();
-
-                // SENHA ADMIN DEFINIDA: TURBOSUL2026
-                if (!motivo || keyword !== 'TURBOSUL2026') {
-                    alert("⚠️ Autorização negada: Justifique a mudança e insira a senha ADMIN correta.");
-                    return;
-                }
-
-                document.getElementById('modal-autorizacao-vendas').classList.add('hidden');
-                document.getElementById('modal-gerar-os').classList.remove('hidden');
-                document.getElementById('modal-gerar-os').classList.add('flex');
-            });
+            
 
 // 3. ENVIO FINAL E GERAÇÃO DE EXCEL
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
