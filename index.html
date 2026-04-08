@@ -128,63 +128,33 @@
                         </div>
                     </div>
 
-                    <!-- Abas de Navegação Comercial -->
-                    <div class="p-4 border-b flex space-x-8 bg-white">
-                        <button type="button" class="tab-button-sales text-brand-blue border-b-2 border-brand-blue font-semibold" data-tab="tab1-sales">1. Anexos / Extras</button>
-                        <button type="button" class="tab-button-sales text-gray-500 hover:text-gray-700 font-medium" data-tab="tab2-sales">2. Reparos Gerais</button>
-                        <button type="button" class="tab-button-sales text-gray-500 hover:text-gray-700 font-medium" data-tab="tab3-sales">3. Checklist Caracol</button>
+<!-- CHECKLIST ÚNICO DE APROVAÇÃO (TurboSul Commercial) -->
+                    <div class="p-4 bg-slate-50 border-b flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Checklist de Itens para Vendas</span>
+                            <span class="text-[9px] text-blue-600 font-bold uppercase ml-2 italic">* Itens detectados pela Análise Técnica</span>
+                        </div>
+                        
+                        <!-- Botão de Condenar Caracol movido para o topo para facilitar acesso -->
+                        <div class="mr-4 flex items-center bg-red-50 px-4 py-2 rounded-xl border border-red-100">
+                            <input type="checkbox" id="condenar-caracol-global-vendas" onchange="condenarTudoCaracolVendas(this)" class="w-5 h-5 text-red-600 border-red-300 rounded focus:ring-red-500 cursor-pointer">
+                            <label for="condenar-caracol-global-vendas" class="ml-2 text-[10px] font-black text-red-700 uppercase tracking-tighter cursor-pointer">Condenar Caracol (FULL)</label>
+                        </div>
                     </div>
 
-                    <!-- Tabela de Decisão (Checklists) -->
-                    <div class="flex-grow p-6 overflow-y-auto space-y-6">
-                        
-                        <!-- Conteúdo da Aba 1 -->
-                        <div id="tab1-sales" class="tab-content-sales">
-                            <table class="min-w-full divide-y divide-gray-200 border rounded-lg overflow-hidden">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/2">Peça / Serviço (Anexos e Extras)</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">Decisão Vendas</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="body-tab1" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
-
-                        <!-- Conteúdo da Aba 2 -->
-                        <div id="tab2-sales" class="tab-content-sales hidden">
-                            <table class="min-w-full divide-y divide-gray-200 border rounded-lg overflow-hidden">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/2">Peça / Serviço (Interno)</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">Decisão Vendas</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="body-tab2" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
-
-                        <!-- Conteúdo da Aba 3 -->
-                        <div id="tab3-sales" class="tab-content-sales hidden">
-                            <!-- NOVO: Checkbox Global para Condenar Caracol -->
-                            <div class="p-4 mb-4 border-2 border-red-200 rounded-xl bg-red-50/50 flex items-center justify-between">
-                                <div class="flex items-center space-x-3">
-                                    <input type="checkbox" id="condenar-caracol-global-vendas" onchange="condenarTudoCaracolVendas(this)" class="w-6 h-6 text-red-600 border-red-300 rounded focus:ring-red-500 cursor-pointer">
-                                    <label for="condenar-caracol-global-vendas" class="text-sm font-black text-red-700 uppercase tracking-tighter cursor-pointer">CONDENAR CARACOL COMPLETO (MARCAR TUDO COMO TROCAR)</label>
-                                </div>
-                                <i class="fa-solid fa-triangle-exclamation text-red-400 text-xl animate-pulse"></i>
-                            </div>
-
-                            <table class="min-w-full divide-y divide-gray-200 border rounded-lg overflow-hidden">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/2">Peça / Serviço (Caracol)</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-1/2">Decisão Vendas</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="body-tab3" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
+                    <div class="flex-grow p-6 overflow-y-auto max-h-[500px] custom-scroll">
+                        <table class="min-w-full divide-y divide-gray-200 border rounded-xl overflow-hidden shadow-sm">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest w-1/2">Peça / Serviço Detectado</th>
+                                    <th class="px-6 py-4 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest w-1/2">Decisão de Vendas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-checklist-unico" class="bg-white divide-y divide-slate-100">
+                                <!-- Os itens serão injetados aqui via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
 
                         <div class="mt-6 p-4 border rounded-lg bg-blue-50">
                             <h4 class="text-base font-semibold text-blue-800 mb-4 flex items-center">
@@ -548,63 +518,50 @@ function renderOrderCard(order) {
         }
 
         function renderDecisionTable(order) {
-            const body1 = document.getElementById('body-tab1');
-            const body2 = document.getElementById('body-tab2');
-            const body3 = document.getElementById('body-tab3');
-            
-            body1.innerHTML = ''; body2.innerHTML = ''; body3.innerHTML = '';
+            const body = document.getElementById('body-checklist-unico');
+            body.innerHTML = '';
 
             const allItems = order.checklist || []; 
+            
+            if (allItems.length === 0) {
+                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-gray-400 text-xs italic font-bold uppercase tracking-widest">Nenhuma peça ou serviço identificado pelo técnico.</td></tr>';
+                return;
+            }
 
-            const createRow = (item) => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3 text-sm font-black text-gray-800 uppercase tracking-tighter">${item.item_name}</td>
-                    <td class="px-6 py-3 text-sm">${createDecisionSelect(item.item_name, item.status, item.decisao_vendas)}</td>
-                </tr>`;
-
+            // Filtra e Prioriza os itens (Atuador, Geometria, etc.)
+            const prioritizedKeywords = ['ATUADOR', 'GEOMETRIA', 'CANOTE', 'FLANGE'];
+            
             allItems.forEach(item => {
-                const name = item.item_name;
+                const name = item.item_name.toUpperCase();
+                
+                // Ignora o item de condenação global na listagem
+                if (name === 'CONDENAR CARACOL COMPLETO') return;
 
-                // FILTRO UNÍSSONO: Impede que o botão global apareça como linha comum na tabela
-                if (name.toUpperCase() === 'CONDENAR CARACOL COMPLETO') return;
-                const isExtra = ['ATUADOR', 'GEOMETRIA VARIÁVEL', 'CANOTE DA GEOMETRIA', 'FLANGE DA GEOMETRIA'].includes(name.toUpperCase());
+                const isCritical = prioritizedKeywords.some(key => name.includes(key));
+                const rowClass = isCritical ? 'bg-blue-50/30' : '';
+                const icon = isCritical ? '<i class="fa-solid fa-star text-blue-400 mr-2"></i>' : '';
 
-                if (ANALYSIS_ITEMS.tab1.includes(name) || isExtra) {
-                    body1.insertAdjacentHTML('beforeend', createRow(item));
-                } else if (ANALYSIS_ITEMS.tab2.includes(name)) {
-                    body2.insertAdjacentHTML('beforeend', createRow(item));
-                } else if (ANALYSIS_ITEMS.tab3.includes(name)) {
-                    body3.insertAdjacentHTML('beforeend', createRow(item));
-                } else {
-                    body1.insertAdjacentHTML('beforeend', createRow(item));
-                }
+                const row = `
+                    <tr class="${rowClass} hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 text-sm font-black text-slate-700 uppercase tracking-tighter">
+                            ${icon}${item.item_name}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            ${createDecisionSelect(item.item_name, item.status, item.decisao_vendas)}
+                        </td>
+                    </tr>`;
+                
+                body.insertAdjacentHTML('beforeend', row);
             });
-
-            if (body1.innerHTML === '') body1.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item externo identificado.</td></tr>';
-            if (body2.innerHTML === '') body2.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item interno identificado.</td></tr>';
-            if (body3.innerHTML === '') body3.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-gray-400 text-xs italic font-bold">Nenhum item do caracol identificado.</td></tr>';
 
             validarDivergencias();
             
-            // PINTA OS SELECTS QUE JÁ POSSUEM VALOR
+            // Pinta os selects que já possuem valor (memória)
             setTimeout(() => {
                 document.querySelectorAll('.decision-select-item').forEach(select => {
                     if (select.value) updateStatusSelectStyle(select);
                 });
-            }, 100);
-
-            switchSalesTab('tab1-sales');
-        }
-
-        function switchSalesTab(tabId) {
-            document.querySelectorAll('.tab-content-sales').forEach(c => c.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-            document.querySelectorAll('.tab-button-sales').forEach(btn => {
-                btn.classList.remove('text-brand-blue', 'border-b-2', 'border-brand-blue', 'font-semibold');
-                btn.classList.add('text-gray-500', 'font-medium');
-            });
-            const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
-            if (activeBtn) activeBtn.classList.add('text-brand-blue', 'border-b-2', 'border-brand-blue', 'font-semibold');
+            }, 50);
         }
 
         function populateDecisionPanel(order) {
@@ -900,9 +857,7 @@ function validarDivergencias() {
                 dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${option}">${option}</option>`);
             });
 
-            document.querySelectorAll('.tab-button-sales').forEach(btn => {
-                btn.addEventListener('click', () => switchSalesTab(btn.dataset.tab));
-            });
+            
 
             trocarConjuntoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
