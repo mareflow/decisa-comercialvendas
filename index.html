@@ -827,18 +827,17 @@ function validarDivergencias() {
             }
             return { temDivergencia, temIncompleto };
         }
-        // ====================================================================
-        // 4. INICIALIZAÇÃO DOS LISTENERS
+// ====================================================================
+        // 4. INICIALIZAÇÃO DOS LISTENERS (VERSÃO FINAL E LIMPA)
         // ====================================================================
         
         document.addEventListener('DOMContentLoaded', () => {
+            // Mapeamento de Elementos
             filaContainer = document.getElementById('fila-de-vendas-container');
             loadingMessage = document.getElementById('loading-message');
             dispatchLocationSelect = document.getElementById('dispatch-location-select');
-
             trocarConjuntoBtn = document.getElementById('trocar-conjunto-btn');
             resetDiagnosticoBtn = document.getElementById('reset-diagnostico-btn');
-            
             quickActionModal = document.getElementById('quick-action-modal');
             confirmActionBtn = document.getElementById('confirm-action-btn');
             cancelActionBtn = document.getElementById('cancel-action-btn');
@@ -848,29 +847,20 @@ function validarDivergencias() {
             actionSuccessOkBtn = document.getElementById('action-success-ok-btn');
             actionSuccessMessage = document.getElementById('action-success-message');
 
+            // Popular locais de despacho
             DISPATCH_OPTIONS.forEach(option => {
                 dispatchLocationSelect.insertAdjacentHTML('beforeend', `<option value="${option}">${option}</option>`);
             });
 
-            
-
+            // Listeners de Ações Rápidas (Troca Full / Reset)
             trocarConjuntoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
-                showQuickActionModal('trocar', 'TROCA TOTAL (FULL)', 'Deseja marcar todos os itens de todas as abas como TROCAR automaticamente?');
+                showQuickActionModal('trocar', 'TROCA TOTAL (FULL)', 'Deseja marcar todos os itens como TROCAR automaticamente?');
             });
             
             resetDiagnosticoBtn.addEventListener('click', () => {
                 if (!activeOSId) return;
-                showQuickActionModal('reset', 'RESETAR ANÁLISE', 'Deseja limpar todas as suas decisões e voltar todos os itens para SELECIONAR?');
-            });
-
-            document.getElementById('historic-button').addEventListener('click', () => {
-                if (activeOSId) carregarLinhaDoTempo(activeOSId);
-            });
-
-            document.getElementById('close-details-modal-btn').addEventListener('click', () => {
-                document.getElementById('details-modal').classList.add('hidden');
-                document.getElementById('details-modal').classList.remove('flex');
+                showQuickActionModal('reset', 'RESETAR DIAGNÓSTICO', 'Deseja limpar suas decisões e voltar para SELECIONAR?');
             });
 
             confirmActionBtn.addEventListener('click', () => {
@@ -880,48 +870,49 @@ function validarDivergencias() {
 
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
-            
-            // LISTENER DO FORMULÁRIO DE DECISÃO (LIMPO E ÚNICO)
+
+            // Listeners de UI e Histórico
+            document.getElementById('historic-button').addEventListener('click', () => {
+                if (activeOSId) carregarLinhaDoTempo(activeOSId);
+            });
+
+            document.getElementById('close-details-modal-btn').addEventListener('click', () => {
+                document.getElementById('details-modal').classList.add('hidden');
+                document.getElementById('details-modal').classList.remove('flex');
+            });
+
+            // --- 1. APROVAR VENDA (ABRE O MODAL DE Nº DE OS) ---
             document.getElementById('sales-decision-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
-                // 1. Verifica se o vendedor preencheu todas as opções
                 const { temIncompleto } = validarDivergencias();
                 
                 if (temIncompleto) {
-                    alert("Atenção: Você precisa selecionar uma decisão para todos os itens antes de prosseguir.");
+                    alert("Por favor, selecione uma decisão para todos os itens da lista.");
                     return;
                 }
 
-                // 2. Localiza a Ordem de Serviço atual na memória
                 const activeOrder = currentOrders.find(o => o.id === activeOSId);
                 if (!activeOrder) return;
                 
-                // 3. Lógica TurboSul: Transforma o prefixo ORÇ- em O.S-
+                // Transforma ORÇ- em O.S- automaticamente
                 const numeroApenas = activeOrder.business_id.replace('ORÇ-', '');
                 const numeroOSGerado = 'O.S-' + numeroApenas;
 
-                // 4. Abre o Modal para confirmar o número oficial
                 const modalOS = document.getElementById('modal-gerar-os');
                 modalOS.classList.remove('hidden');
                 modalOS.classList.add('flex');
 
-                // 5. Preenche o campo automaticamente e foca nele
                 const inputOS = document.getElementById('input-os-oficial');
                 inputOS.value = numeroOSGerado;
                 inputOS.focus();
             });
 
-            
-
-// 3. ENVIO FINAL E GERAÇÃO DE EXCEL (VERSÃO CORRIGIDA SEM TRAVA)
+            // --- 2. CONFIRMAR E ENVIAR PARA N8N ---
             document.getElementById('confirm-generate-os-btn').addEventListener('click', async () => {
                 let osNumOficial = document.getElementById('input-os-oficial').value.trim().toUpperCase();
-                if (!osNumOficial) { alert("Informe o número da OS para continuar."); return; }
+                if (!osNumOficial) { alert("Informe o número da OS."); return; }
                 
-                if (!osNumOficial.startsWith('O.S-')) {
-                    osNumOficial = 'O.S-' + osNumOficial;
-                } 
+                if (!osNumOficial.startsWith('O.S-')) osNumOficial = 'O.S-' + osNumOficial;
                 
                 const btnConfirm = document.getElementById('confirm-generate-os-btn');
                 btnConfirm.disabled = true; 
@@ -935,7 +926,6 @@ function validarDivergencias() {
                         os_id: activeOSId,
                         new_os_number: osNumOficial, 
                         is_divergent: temDivergencia,
-                        // Enviamos vazio ou uma nota padrão, já que o campo foi removido
                         divergence_reason: "Liberado via fluxo direto de vendas",
                         decisions: Array.from(decisionElements).map(s => ({ 
                             item_name: s.dataset.itemName, 
@@ -960,44 +950,22 @@ function validarDivergencias() {
                         showActionSuccessModal(`Sucesso! Orçamento convertido para ${osNumOficial}.`);
                         setTimeout(() => location.reload(), 2000);
                     } else {
-                        alert("Falha ao salvar no servidor.");
-                        btnConfirm.disabled = false; 
-                        btnConfirm.textContent = 'CONFIRMAR E ENVIAR';
+                        alert("Erro ao salvar. Verifique o servidor.");
+                        btnConfirm.disabled = false; btnConfirm.textContent = 'CONFIRMAR E ENVIAR';
                     }
                 } catch (err) { 
                     console.error("Erro no envio:", err); 
-                    alert("Erro de conexão com o servidor.");
                     btnConfirm.disabled = false;
                 }
             });
 
-                    const response = await fetch(WEBHOOK_FINALIZE_SALES, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify(payload) 
-                    });
-
-                    if (response.ok) {
-                        // GERA O RELATÓRIO EXCEL COMERCIAL
-                        gerarRelatorioExcelComercial(payload);
-                        
-                        document.getElementById('modal-gerar-os').classList.add('hidden');
-                        showActionSuccessModal(`Sucesso! Orçamento convertido para ${osNumOficial}.`);
-                        setTimeout(() => location.reload(), 2500);
-                    } else {
-                        alert("Falha ao salvar no servidor.");
-                        btnConfirm.disabled = false; btnConfirm.textContent = 'CONFIRMAR E ENVIAR';
-                    }
-                } catch (err) { console.error("Erro no envio:", err); }
-            });
-
-            (async function initDashboard() {
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
+            // Inicialização Real
+            (async function init() {
                 await loadSalesOrders();
             })();
         });
 
-        // 4. FUNÇÃO PARA GERAR RELATÓRIO EXCEL COMERCIAL (PADRÃO TURBOSUL)
+        // 5. FUNÇÃO PARA GERAR RELATÓRIO EXCEL (PADRÃO TURBOSUL)
         function gerarRelatorioExcelComercial(payload) {
             const data = [
                 ["RELATÓRIO DE APROVAÇÃO COMERCIAL"],
@@ -1008,17 +976,13 @@ function validarDivergencias() {
                 [""],
                 ["ITEM", "DECISÃO VENDAS"]
             ];
-            
             payload.decisions.forEach(d => data.push([d.item_name, d.decisao_vendas]));
-
             const ws = XLSX.utils.aoa_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Aprovacao_Comercial");
-            
             XLSX.writeFile(wb, `Relatorio_Comercial_${payload.new_os_number.replace(/\./g, '')}.xlsx`);
         }
-		
-		
     </script>
 </body>
 </html>
+
