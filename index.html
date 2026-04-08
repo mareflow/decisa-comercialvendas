@@ -516,27 +516,41 @@ function renderDecisionTable(order) {
             if (!body) return;
             body.innerHTML = '';
 
-            // 1. ITENS FIXOS OBRIGATÓRIOS PARA VENDAS (Sempre aparecem na tela)
+            // --- OS 7 ITENS OBRIGATÓRIOS DA TURBOSUL (HARDCODED) ---
             const coreItems = [
                 { id: 'actuator', name: "ATUADOR" },
                 { id: 'geometry', name: "GEOMETRIA VARIÁVEL" },
                 { id: 'geometryStem', name: "CANOTE DA GEOMETRIA" },
-                { id: 'geometryFlange', name: "FLANGE DA GEOMETRIA" }
+                { id: 'geometryFlange', name: "FLANGE DA GEOMETRIA" },
+                { id: 'eixo', name: "EIXO ROTOR" },
+                { id: 'rotor', name: "ROTOR COMPRESSOR" },
+                { id: 'ct', name: "CARCAÇA DE TURBINA (CT)" }
             ];
 
-            // 2. Tenta recuperar o que já foi salvo no banco (checklist)
-            const salesChecklist = order.checklist || [];
+            // Recupera o que veio do banco (Análise Técnica)
+            const techChecklist = order.checklist || [];
 
             coreItems.forEach(item => {
-                // Procura se já existe decisão salva para esse item
-                const existingData = salesChecklist.find(c => c.item_name.toUpperCase() === item.name);
-                const salesDecision = existingData ? existingData.decisao_vendas : ""; // Inicia vazio se não houver
+                // Tenta encontrar o item no checklist que veio do banco
+                const existingData = techChecklist.find(c => 
+                    (c.item_name || "").toUpperCase().trim() === item.name
+                );
+
+                // Recupera a decisão de vendas se já existir, senão fica vazio para o vendedor escolher
+                const salesDecision = existingData ? (existingData.decisao_vendas === "PENDING" ? "" : existingData.decisao_vendas) : "";
+                
+                // Exibe o veredito do técnico (BOM/OK ou TROCAR) para orientar o vendedor
                 const techVerdict = existingData ? existingData.status : "NÃO INFORMADO";
 
+                // Diferenciação visual: Conjunto Rotativo vs Acessórios
+                const isCore = ["EIXO ROTOR", "ROTOR COMPRESSOR", "CARCAÇA DE TURBINA (CT)"].includes(item.name);
+                const rowClass = isCore ? 'bg-amber-50/40 border-amber-100' : 'bg-blue-50/40 border-blue-100';
+                const icon = isCore ? 'fa-gears text-amber-500' : 'fa-check-double text-blue-500';
+
                 const row = `
-                    <tr class="bg-blue-50/30 hover:bg-blue-50 transition border-b border-blue-100">
+                    <tr class="${rowClass} hover:bg-slate-50 transition border-b">
                         <td class="px-6 py-5 text-sm font-black text-slate-800 uppercase tracking-tighter">
-                            <i class="fa-solid fa-check-double text-blue-500 mr-3"></i>${item.name}
+                            <i class="fa-solid ${icon} mr-3"></i>${item.name}
                             <p class="text-[9px] text-slate-400 font-bold italic mt-1 uppercase">Auditoria Comercial Obrigatória</p>
                         </td>
                         <td class="px-6 py-5 text-sm">
@@ -552,7 +566,7 @@ function renderDecisionTable(order) {
             // Pinta os selects que já possuem valor
             setTimeout(() => {
                 document.querySelectorAll('.decision-select-item').forEach(select => {
-                    if (select.value && select.value !== "SELECIONAR...") {
+                    if (select.value && select.value !== "") {
                         updateStatusSelectStyle(select);
                     }
                 });
@@ -985,4 +999,3 @@ function validarDivergencias() {
     </script>
 </body>
 </html>
-
