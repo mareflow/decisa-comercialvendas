@@ -511,31 +511,55 @@ function renderOrderCard(order) {
             validarDivergencias(); 
         }
 
-        function renderDecisionTable(order) {
+function renderDecisionTable(order) {
             const body = document.getElementById('body-checklist-unico');
             if (!body) return;
             body.innerHTML = '';
 
-            // Pega o checklist enviado pelo n8n/Supabase
-            const allItems = order.checklist || []; 
+            const itemsToDisplay = [];
+
+            // 1. LER APENAS OS 4 ITENS DO TOPO (maintenance_extras)
+            const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
             
-            if (allItems.length === 0) {
-                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-gray-400 text-xs italic font-bold uppercase tracking-widest">Nenhuma peça ou serviço enviado pela análise.</td></tr>';
+            if (extras) {
+                const labels = { 
+                    actuator: "ATUADOR", 
+                    geometry: "GEOMETRIA VARIÁVEL", 
+                    geometryStem: "CANOTE DA GEOMETRIA", 
+                    geometryFlange: "FLANGE DA GEOMETRIA" 
+                };
+
+                Object.entries(extras).forEach(([key, data]) => {
+                    // Só entra na lista se o técnico marcou que o item EXISTE ("came": true)
+                    const hasItem = (data === true) || (data && data.came === true);
+                    const techVerdict = data.status || (data === true ? "BOM / OK" : "NÃO INFORMADO");
+
+                    if (hasItem) {
+                        itemsToDisplay.push({
+                            name: labels[key] || key,
+                            techStatus: techVerdict,
+                            salesDecision: "PENDING" 
+                        });
+                    }
+                });
+            }
+
+            // 2. Valida se algum item foi detectado
+            if (itemsToDisplay.length === 0) {
+                body.innerHTML = '<tr><td colspan="2" class="py-12 text-center text-slate-400 text-xs italic font-bold uppercase tracking-widest">Nenhum dos 4 itens principais (Atuador/Geometria) foi identificado para troca ou reparo.</td></tr>';
                 return;
             }
 
-            allItems.forEach(item => {
-                // Usa item_name (vinda do n8n) ou name (vinda da view)
-                const nomeItem = item.item_name || item.name || "Item Indefinido";
-                
+            // 3. Renderiza apenas os itens filtrados
+            itemsToDisplay.forEach(item => {
                 const row = `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-50">
+                    <tr class="bg-blue-50/30 hover:bg-blue-50 transition border-b border-blue-100">
                         <td class="px-6 py-4 text-sm font-black text-slate-700 uppercase tracking-tighter">
-                            ${nomeItem}
-                            <p class="text-[9px] text-blue-500 font-bold italic">Veredito Técnico: ${item.status || 'NÃO INF.'}</p>
+                            <i class="fa-solid fa-star text-blue-400 mr-2"></i>${item.name}
+                            <p class="text-[9px] text-blue-500 font-bold italic">Veredito Técnico: ${item.techStatus || 'NÃO INF.'}</p>
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            ${createDecisionSelect(nomeItem, item.status, item.decisao_vendas)}
+                            ${createDecisionSelect(item.name, item.techStatus, item.salesDecision)}
                         </td>
                     </tr>`;
                 
@@ -552,7 +576,6 @@ function renderOrderCard(order) {
                 });
             }, 100);
         }
-
         function populateDecisionPanel(order) {
             activeOSId = order.id;
 			// Reseta o checkbox global de caracol ao carregar uma nova OS
