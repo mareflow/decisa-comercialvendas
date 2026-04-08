@@ -931,47 +931,35 @@ function validarDivergencias() {
             cancelActionBtn.addEventListener('click', closeQuickActionModal);
             actionSuccessOkBtn.addEventListener('click', closeActionSuccessModal);
             
+            // LISTENER DO FORMULÁRIO DE DECISÃO (LIMPO E ÚNICO)
             document.getElementById('sales-decision-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                
+                // 1. Verifica se o vendedor preencheu todas as opções
                 const { temIncompleto } = validarDivergencias();
                 
                 if (temIncompleto) {
-                    alert("Selecione uma decisão para todos os itens.");
+                    alert("Atenção: Você precisa selecionar uma decisão para todos os itens antes de prosseguir.");
                     return;
                 }
 
-                // Pega a OS ativa na memória
+                // 2. Localiza a Ordem de Serviço atual na memória
                 const activeOrder = currentOrders.find(o => o.id === activeOSId);
+                if (!activeOrder) return;
                 
-                // Lógica TurboSul: Pega o que está depois do "ORÇ-" e coloca "O.S-"
+                // 3. Lógica TurboSul: Transforma o prefixo ORÇ- em O.S-
                 const numeroApenas = activeOrder.business_id.replace('ORÇ-', '');
                 const numeroOSGerado = 'O.S-' + numeroApenas;
 
+                // 4. Abre o Modal para confirmar o número oficial
                 const modalOS = document.getElementById('modal-gerar-os');
                 modalOS.classList.remove('hidden');
                 modalOS.classList.add('flex');
 
-                // Já deixa o campo preenchido com o número automático
+                // 5. Preenche o campo automaticamente e foca nele
                 const inputOS = document.getElementById('input-os-oficial');
                 inputOS.value = numeroOSGerado;
                 inputOS.focus();
-            });
-                    // Pega a OS ativa na memória
-                    const activeOrder = currentOrders.find(o => o.id === activeOSId);
-                    
-                    // Lógica TurboSul: Pega o que está depois do "ORÇ-" e coloca "O.S-"
-                    const numeroApenas = activeOrder.business_id.replace('ORÇ-', '');
-                    const numeroOSGerado = 'O.S-' + numeroApenas;
-
-                    const modalOS = document.getElementById('modal-gerar-os');
-                    modalOS.classList.remove('hidden');
-                    modalOS.classList.add('flex');
-
-                    // Já deixa o campo preenchido com o número automático
-                    const inputOS = document.getElementById('input-os-oficial');
-                    inputOS.value = numeroOSGerado;
-                    inputOS.focus();
-                }
             });
 
             
