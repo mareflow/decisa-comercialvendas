@@ -970,11 +970,23 @@ function validarDivergencias() {
                     });
 
                     if (response.ok) {
-                        const result = await response.json();
-                        
-                        // Abre o Relatório Comercial PDF oficial
-                        if (result.pdf_url) {
-                            window.open(result.pdf_url, '_blank');
+                        try {
+                            const result = await response.json();
+                            
+                            // TRATAMENTO TurboSul: Aceita Array ou Objeto e os dois nomes de campo (download_url ou pdf_url)
+                            const data = Array.isArray(result) ? result[0] : result;
+                            const urlFinal = data.download_url || data.pdf_url;
+
+                            if (urlFinal) {
+                                const link = document.createElement('a');
+                                link.href = urlFinal;
+                                link.target = '_blank';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }
+                        } catch (e) {
+                            console.log("Erro ao abrir PDF Comercial:", e);
                         }
 
                         document.getElementById('modal-gerar-os').classList.add('hidden');
