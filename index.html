@@ -970,7 +970,13 @@ function validarDivergencias() {
                     });
 
                     if (response.ok) {
-                        gerarRelatorioExcelComercial(payload);
+                        const result = await response.json();
+                        
+                        // Abre o Relatório Comercial PDF oficial
+                        if (result.pdf_url) {
+                            window.open(result.pdf_url, '_blank');
+                        }
+
                         document.getElementById('modal-gerar-os').classList.add('hidden');
                         showActionSuccessModal(`Sucesso! Orçamento convertido para ${osNumOficial}.`);
                         setTimeout(() => location.reload(), 2000);
