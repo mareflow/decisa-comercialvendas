@@ -453,21 +453,8 @@ function renderOrderCard(order) {
             const urgencyText = order.urgency || 'Normal';
             const urgencyClass = getUrgencyBadge(urgencyText);
             
-            // INTELIGÊNCIA DE TRAVA: Verifica se a OS está bloqueada por divergência
-            const isLocked = order.status === 'Bloqueada - Divergência Técnica';
-            
-            // Define a tag vermelha se estiver travada
-            const lockBadge = isLocked ? `
-                <div class="mt-2 flex items-center space-x-1 bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase animate-pulse">
-                    <svg class="w-2 h-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
-                    <span>Divergência Técnica</span>
-                </div>` : '';
-
-            // Se estiver travada, o card ganha borda vermelha
-            const borderClass = isLocked ? 'border-2 border-red-600 shadow-red-50 bg-red-50/30' : 'border-gray-200 bg-white';
-
             return `
-                <div class="os-card ${borderClass} p-3 rounded-lg shadow cursor-pointer transition-all duration-200" 
+                <div class="os-card border border-gray-200 bg-white p-3 rounded-lg shadow cursor-pointer transition-all duration-200" 
                      data-order-id="${order.id}" 
                      data-status="${order.status}">
                     <p class="text-base font-bold text-gray-800 mb-1 flex justify-between items-center">${order.business_id}
@@ -475,7 +462,6 @@ function renderOrderCard(order) {
                     </p>
                     <p class="text-sm text-gray-600">${order.model}</p>
                     <p class="text-xs text-gray-500">${order.client}</p>
-                    ${lockBadge}
                 </div>
             `;
         }
@@ -791,82 +777,43 @@ document.getElementById('horario-corte').value = order.horario_corte || '18:00';
                         event.currentTarget.classList.add('active');
                         
                         populateDecisionPanel(orderData);
-
-                        // Se a OS estiver bloqueada, exige autorização ao clicar
-                        if (orderData.status === 'Bloqueada - Divergência Técnica') {
-                            document.getElementById('modal-autorizacao-vendas').classList.remove('hidden');
-                            document.getElementById('modal-autorizacao-vendas').classList.add('flex');
-                        }
                     }
                 });
             });
         }
 
-        // --- CORREÇÃO 2: VALIDAÇÃO UNIFICADA ---
-function validarDivergencias() {
+        // --- VALIDAÇÃO UNIFICADA DE PREENCHIMENTO ---
+        function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
-            let temDivergencia = false;
             let temIncompleto = false;
 
             selects.forEach(select => {
-                // 1. Coleta os dados brutos e limpa espaços/caixa alta
-                const techRaw = (select.dataset.techVerdict || 'NÃO INFORMADO').toUpperCase().trim();
                 const salesRaw = select.value.toUpperCase().trim();
                 
                 // Se o vendedor ainda não escolheu nada, marca como incompleto
                 if (!salesRaw) {
                     temIncompleto = true;
-                    return;
                 }
-
-                // 2. Lógica de Normalização (Transforma termos diferentes em uma base comum)
-                let techClean = 'N/A';
-                if (techRaw.includes('OK') || techRaw.includes('BOM')) techClean = 'OK';
-                else if (techRaw.includes('TROCAR') || techRaw.includes('CONDENAR')) techClean = 'TROCAR';
-                else if (techRaw.includes('RECONDICIONAR')) techClean = 'RECONDICIONAR';
-
-                let salesClean = 'N/A';
-                if (salesRaw.includes('OK')) salesClean = 'OK';
-                else if (salesRaw.includes('TROCAR')) salesClean = 'TROCAR';
-                else if (salesRaw.includes('RECONDICIONAR')) salesClean = 'RECONDICIONAR';
-
-                // 3. Comparação Inteligente
-                // Só valida se o técnico deu um veredito real (Ignora PENDING ou NÃO INFORMADO)
-                const isTechVereditValid = !['NÃO INFORMADO', 'PENDING', 'NÃO RECEBIDO', ''].includes(techRaw);
-
-                if (isTechVereditValid && techClean !== salesClean) {
-                    temDivergencia = true;
-                    // Aplica um destaque visual mais forte no campo divergente
-                    select.classList.add('ring-4', 'ring-red-500', 'ring-inset');
-                } else {
-                    select.classList.remove('ring-4', 'ring-red-500', 'ring-inset');
-                }
+                // Força a remoção de anéis e marcações residuais de divergência
+                select.classList.remove('ring-4', 'ring-red-500', 'ring-inset');
             });
 
-            // 4. Gestão da Interface (Botão e Alerta)
+            // Remove o alerta visual de divergência se ele houver sido inserido no DOM
             const alertMsg = document.getElementById('alert-divergence');
+            if (alertMsg) alertMsg.remove();
 
             if (temIncompleto) {
                 finalizeBtn.innerHTML = 'AGUARDANDO SELEÇÃO...';
                 finalizeBtn.classList.replace('bg-green-600', 'bg-slate-300');
                 finalizeBtn.disabled = true;
-                if (alertMsg) alertMsg.remove();
             } else {
                 finalizeBtn.innerHTML = 'APROVAR VENDA E GERAR OS';
                 finalizeBtn.classList.replace('bg-slate-300', 'bg-green-600');
                 finalizeBtn.disabled = false;
-                
-                if (temDivergencia) {
-                    if (!alertMsg) {
-                        const html = `<div id="alert-divergence" class="mb-4 p-3 divergence-warning rounded-lg text-sm font-bold uppercase text-center">Atenção: Divergência detectada entre Vendas e Técnico.</div>`;
-                        document.getElementById('vendas-observacoes').insertAdjacentHTML('beforebegin', html);
-                    }
-                } else {
-                    if (alertMsg) alertMsg.remove();
-                }
             }
-            return { temDivergencia, temIncompleto };
+            
+            return { temDivergencia: false, temIncompleto };
         }
 // ====================================================================
         // 4. INICIALIZAÇÃO DOS LISTENERS (VERSÃO FINAL E LIMPA)
@@ -960,13 +907,12 @@ function validarDivergencias() {
                 btnConfirm.textContent = 'Enviando...';
 
                 try {
-                    const { temDivergencia } = validarDivergencias();
                     const decisionElements = document.querySelectorAll('.decision-select-item');
                     
                     const payload = {
                         os_id: activeOSId,
                         new_os_number: osNumOficial, 
-                        is_divergent: temDivergencia,
+                        is_divergent: false, // Forçado como false para evitar travamentos em banco e n8n
                         divergence_reason: "Liberado via fluxo direto de vendas",
                         decisions: Array.from(decisionElements).map(s => ({ 
                             item_name: s.dataset.itemName, 
