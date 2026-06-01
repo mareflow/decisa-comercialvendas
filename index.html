@@ -527,14 +527,16 @@ function renderDecisionTable(order) {
             if (!body) return;
             body.innerHTML = '';
 
-            // --- OS 7 ITENS OBRIGATÓRIOS DA TURBOSUL (HARDCODED) ---
+            // --- OS 9 ITENS OBRIGATÓRIOS DA TURBOSUL (HARDCODED) ---
             const coreItems = [
                 { id: 'actuator', name: "ATUADOR" },
                 { id: 'geometry', name: "GEOMETRIA VARIÁVEL" },
                 { id: 'geometryStem', name: "CANOTE DA GEOMETRIA" },
                 { id: 'geometryFlange', name: "FLANGE DA GEOMETRIA" },
-                { id: 'eixo', name: "EIXO ROTOR" },
-                { id: 'rotor', name: "ROTOR COMPRESSOR" },
+                { id: 'eixo', name: "EIXO" },
+                { id: 'rotor', name: "ROTOR" },
+                { id: 'cce', name: "CCE" },
+                { id: 'reparos', name: "REPAROS" },
                 { id: 'ct', name: "CARCAÇA DE TURBINA (CT)" }
             ];
 
@@ -542,10 +544,20 @@ function renderDecisionTable(order) {
             const techChecklist = order.checklist || [];
 
             coreItems.forEach(item => {
-                // Tenta encontrar o item no checklist que veio do banco
-                const existingData = techChecklist.find(c => 
-                    (c.item_name || "").toUpperCase().trim() === item.name
-                );
+                // Tenta encontrar o item no checklist tratando variações de nomenclatura de legado
+                const existingData = techChecklist.find(c => {
+                    const dbName = (c.item_name || "").toUpperCase().trim();
+                    const targetName = item.name.toUpperCase().trim();
+                    
+                    if (dbName === targetName) return true;
+                    
+                    // Fallbacks de Normalização da TurboSul (Legado vs Novo Padrão de Vendas)
+                    if (targetName === "EIXO" && (dbName === "EIXO ROTOR" || dbName === "EIXO_ROTOR")) return true;
+                    if (targetName === "ROTOR" && (dbName === "ROTOR COMPRESSOR" || dbName === "ROTOR_COMPRESSOR")) return true;
+                    if (targetName === "CARCAÇA DE TURBINA (CT)" && (dbName === "CARCAÇA_DE_TURBINA_(CT)" || dbName === "CARCAÇA DE TURBINA" || dbName === "CT")) return true;
+                    
+                    return false;
+                });
 
                 // Recupera a decisão de vendas se já existir, senão fica vazio para o vendedor escolher
                 const salesDecision = existingData ? (existingData.decisao_vendas === "PENDING" ? "" : existingData.decisao_vendas) : "";
@@ -553,8 +565,8 @@ function renderDecisionTable(order) {
                 // Exibe o veredito do técnico (BOM/OK ou TROCAR) para orientar o vendedor
                 const techVerdict = existingData ? existingData.status : "NÃO INFORMADO";
 
-                // Diferenciação visual: Conjunto Rotativo vs Acessórios
-                const isCore = ["EIXO ROTOR", "ROTOR COMPRESSOR", "CARCAÇA DE TURBINA (CT)"].includes(item.name);
+                // Diferenciação visual: Conjunto Rotativo (Peças Físicas do Núcleo) vs Acessórios
+                const isCore = ["EIXO", "ROTOR", "CCE", "REPAROS", "CARCAÇA DE TURBINA (CT)"].includes(item.name);
                 const rowClass = isCore ? 'bg-amber-50/40 border-amber-100' : 'bg-blue-50/40 border-blue-100';
                 const icon = isCore ? 'fa-gears text-amber-500' : 'fa-check-double text-blue-500';
 
@@ -702,10 +714,14 @@ document.getElementById('horario-corte').value = order.horario_corte || '18:00';
             
             if (tipo === 'trocar') {
                 selects.forEach(s => {
-                    s.value = 'TROCAR';
-                    updateStatusSelectStyle(s);
+                    const name = s.dataset.itemName;
+                    // Lógica TurboSul: Marca apenas as 4 peças físicas do Conjunto Rotativo para troca automática
+                    if (["EIXO", "ROTOR", "REPAROS", "CCE"].includes(name)) {
+                        s.value = 'TROCAR';
+                        updateStatusSelectStyle(s);
+                    }
                 });
-                showActionSuccessModal('TROCA TOTAL: Todos os itens foram marcados como TROCAR.');
+                showActionSuccessModal('TROCA PARCIAL: As 4 peças do Conjunto Rotativo (EIXO, ROTOR, REPAROS e CCE) foram marcadas como TROCAR.');
             } else if (tipo === 'reset') {
                 selects.forEach(s => {
                     s.value = '';
