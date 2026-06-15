@@ -779,24 +779,23 @@ document.getElementById('horario-corte').value = order.horario_corte || '18:00';
         function validarDivergencias() {
             const selects = document.querySelectorAll('.decision-select-item');
             const finalizeBtn = document.getElementById('finalize-sales-btn');
-            let temIncompleto = false;
+            let temPeloMenosUmSelecionado = false;
 
             selects.forEach(select => {
                 const salesRaw = select.value.toUpperCase().trim();
                 
-                // Se o vendedor ainda não escolheu nada, marca como incompleto
-                if (!salesRaw) {
-                    temIncompleto = true;
+                // Verifica se há pelo menos um item selecionado com decisão válida
+                if (salesRaw && salesRaw !== '') {
+                    temPeloMenosUmSelecionado = true;
                 }
-                // Força a remoção de anéis e marcações residuais de divergência
                 select.classList.remove('ring-4', 'ring-red-500', 'ring-inset');
             });
 
-            // Remove o alerta visual de divergência se ele houver sido inserido no DOM
             const alertMsg = document.getElementById('alert-divergence');
             if (alertMsg) alertMsg.remove();
 
-            if (temIncompleto) {
+            // Libera o botão caso haja pelo menos uma peça com decisão selecionada
+            if (!temPeloMenosUmSelecionado) {
                 finalizeBtn.innerHTML = 'AGUARDANDO SELEÇÃO...';
                 finalizeBtn.classList.replace('bg-green-600', 'bg-slate-300');
                 finalizeBtn.disabled = true;
@@ -806,7 +805,7 @@ document.getElementById('horario-corte').value = order.horario_corte || '18:00';
                 finalizeBtn.disabled = false;
             }
             
-            return { temDivergencia: false, temIncompleto };
+            return { temDivergencia: false, temIncompleto: !temPeloMenosUmSelecionado };
         }
 // ====================================================================
         // 4. INICIALIZAÇÃO DOS LISTENERS (VERSÃO FINAL E LIMPA)
@@ -868,7 +867,7 @@ document.getElementById('horario-corte').value = order.horario_corte || '18:00';
                 const { temIncompleto } = validarDivergencias();
                 
                 if (temIncompleto) {
-                    alert("Por favor, selecione uma decisão para todos os itens da lista.");
+                    alert("Por favor, selecione pelo menos uma decisão na lista para prosseguir.");
                     return;
                 }
 
